@@ -1,12 +1,7 @@
 [
   {
     "id": "p1",
-    "title": "Enigma 1 — Il guardiano",
-    "text": "Ho le chiavi ma non apro porte, ho spazio ma nessuna stanza, puoi entrare ma non uscire.\nChe cosa sono?"
-  },
-  {
-    "id": "p2",
-    "title": "Enigma 2 — I numeri",
-    "text": "Qual è il numero successivo della sequenza?\n2, 3, 5, 7, 11, 13, ..."
+    "title": "Enigma 1",
+    "text": "La soluzione al primo enigma è:"
   }
 ]
