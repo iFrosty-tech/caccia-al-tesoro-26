@@ -16,6 +16,7 @@
     registerSection: $("register-section"),
     registerForm: $("register-form"),
     usernameInput: $("username-input"),
+    passwordInput: $("password-input"),
     registerError: $("register-error"),
     puzzlesSection: $("puzzles-section"),
     puzzlesStatus: $("puzzles-status"),
@@ -218,26 +219,39 @@
 
   // ---------- Actions ----------
 
-  async function onRegister(event) {
+  // Handles both "Accedi" and "Registrati": the clicked button picks the action.
+  async function onAuth(event) {
     event.preventDefault();
     els.registerError.textContent = "";
+    // Browsers without SubmitEvent.submitter fall back to registration.
+    const action = event.submitter && event.submitter.value === "login" ? "login" : "register";
     const username = els.usernameInput.value.trim();
+    const password = els.passwordInput.value.trim();
     if (username.length < 2 || username.length > 30) {
       els.registerError.textContent = "Lo username deve avere tra 2 e 30 caratteri.";
       return;
     }
-    const button = els.registerForm.querySelector("button");
-    button.disabled = true;
+    if (password.length < 1 || password.length > 50) {
+      els.registerError.textContent = "La password deve avere tra 1 e 50 caratteri.";
+      return;
+    }
+    const buttons = els.registerForm.querySelectorAll("button");
+    buttons.forEach((button) => {
+      button.disabled = true;
+    });
     try {
-      const data = await api("register", { username: username });
+      const data = await api(action, { username: username, password: password });
       const session = { username: data.username, token: data.token };
       saveSession(session);
       els.usernameInput.value = "";
+      els.passwordInput.value = "";
       showPuzzles(session);
     } catch (err) {
       els.registerError.textContent = err.message;
     } finally {
-      button.disabled = false;
+      buttons.forEach((button) => {
+        button.disabled = false;
+      });
     }
   }
 
@@ -254,12 +268,10 @@
       els.configWarning.hidden = false;
       return;
     }
-    els.registerForm.addEventListener("submit", onRegister);
+    els.registerForm.addEventListener("submit", onAuth);
     els.logoutBtn.addEventListener("click", () => {
-      // Without the token the username cannot be reclaimed, so ask first.
-      const confirmed = window.confirm(
-        "Uscendo non potrai più rientrare con questo username da questo dispositivo. Vuoi davvero uscire?"
-      );
+      // Ask first so a misclick does not log the player out.
+      const confirmed = window.confirm("Vuoi uscire? Potrai rientrare con username e password.");
       if (confirmed) logout();
     });
 

@@ -1,9 +1,10 @@
 # Caccia al Tesoro
 
-Sito statico (GitHub Pages) per una caccia al tesoro: i giocatori si registrano con un solo username, rispondono agli enigmi e possono modificare le risposte quando vogliono. Le risposte finiscono in un Google Sheet tramite una Web App di Google Apps Script.
+Sito statico (GitHub Pages) per una caccia al tesoro: i giocatori si registrano con username e password, rispondono agli enigmi e possono modificare le risposte quando vogliono. Le risposte finiscono in un Google Sheet tramite una Web App di Google Apps Script.
 
 - Ogni giocatore vede solo le proprie risposte.
 - L'amministratore legge tutte le risposte direttamente nel foglio.
+- Le password sono salvate in chiaro (è un gioco tra amici, la segretezza non è un obiettivo): l'amministratore le vede nel foglio `Users`.
 
 ## 1. Backend: Google Sheet + Apps Script
 
@@ -16,7 +17,7 @@ Sito statico (GitHub Pages) per una caccia al tesoro: i giocatori si registrano 
 5. Autorizza l'accesso quando richiesto e copia l'**URL dell'app web** (finisce con `/exec`).
 6. Incollalo in [`config.js`](config.js) al posto di `PASTE_APPS_SCRIPT_URL_HERE`.
 
-I fogli `Users` e `Answers` vengono creati automaticamente alla prima richiesta.
+I fogli `Users` (`username`, `token`, `createdAt`, `password`) e `Answers` vengono creati automaticamente alla prima richiesta. Su un foglio `Users` già esistente la colonna `password` viene aggiunta da sola.
 
 ## 2. Pubblicare il sito su GitHub Pages
 
@@ -45,5 +46,7 @@ Dopo aver modificato `Code.gs`, per mantenere lo **stesso URL** usa **Esegui il 
 
 ## 6. Limitazioni
 
-- L'accesso è legato al browser: un token segreto viene salvato nel dispositivo. Se il giocatore cancella i dati del browser, cambia dispositivo o clicca **Esci**, non può più rientrare con lo stesso username.
+- Dopo **Esci**, cancellando i dati del browser o cambiando dispositivo, il giocatore rientra con **Accedi** usando username e password: l'account e le risposte non si perdono.
+- Password dimenticata: l'amministratore la legge (o la cambia) nella colonna `password` del foglio **`Users`**.
+- Gli utenti registrati prima dell'introduzione delle password hanno la colonna `password` vuota e non possono usare **Accedi** finché l'amministratore non ne scrive una.
 - Per liberare uno username, l'amministratore cancella la riga corrispondente nel foglio **`Users`** (le risposte già date restano in `Answers` e verranno riassociate a chi si registra di nuovo con quel nome).

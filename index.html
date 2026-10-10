@@ -22,14 +22,21 @@
     </p>
 
     <section id="register-section" class="card" hidden>
-      <h2>Registrati</h2>
-      <p class="muted">Scegli uno username per partecipare. Verrà ricordato su questo dispositivo.</p>
-      <form id="register-form" class="row">
+      <h2>Entra o registrati</h2>
+      <p class="muted">Accedi con username e password, oppure registrati se è la prima volta.</p>
+      <form id="register-form" class="stack">
         <label for="username-input" class="visually-hidden">Username</label>
         <input id="username-input" name="username" type="text" autocomplete="nickname"
                minlength="2" maxlength="30" required placeholder="Il tuo username">
-        <button type="submit">Entra</button>
+        <label for="password-input" class="visually-hidden">Password</label>
+        <input id="password-input" name="password" type="password" autocomplete="current-password"
+               maxlength="50" required placeholder="La tua password">
+        <div class="row">
+          <button type="submit" value="login">Accedi</button>
+          <button type="submit" value="register">Registrati</button>
+        </div>
       </form>
+      <p class="muted hint">Scegli una password goliardica: la vede anche l'organizzatore.</p>
       <p id="register-error" class="error" role="alert"></p>
     </section>
 

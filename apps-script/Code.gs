@@ -2,24 +2,29 @@
  * Treasure hunt backend: Google Apps Script web app bound to a Google Sheet.
  *
  * Sheets (created automatically if missing):
- *   Users   -> username | token | createdAt
+ *   Users   -> username | token | createdAt | password
  *   Answers -> username | puzzleId | answer | updatedAt
  *
  * Actions (POST body is a JSON string, sent as text/plain to avoid CORS preflight):
- *   { action: "register",     username }
+ *   { action: "register",     username, password }
+ *   { action: "login",        username, password }
  *   { action: "getMyAnswers", username, token }
  *   { action: "saveAnswer",   username, token, puzzleId, answer }
  *
  * There is intentionally no endpoint that lists other players' data.
+ * Passwords are stored in plain text on purpose: secrecy is not a goal and the
+ * admin can read or fix them directly in the sheet.
  */
 
 var USERS_SHEET = 'Users';
 var ANSWERS_SHEET = 'Answers';
-var USERS_HEADERS = ['username', 'token', 'createdAt'];
+var USERS_HEADERS = ['username', 'token', 'createdAt', 'password'];
 var ANSWERS_HEADERS = ['username', 'puzzleId', 'answer', 'updatedAt'];
 
 var USERNAME_MIN = 2;
 var USERNAME_MAX = 30;
+var PASSWORD_MIN = 1;
+var PASSWORD_MAX = 50;
 var ANSWER_MAX = 500;
 var PUZZLE_ID_PATTERN = /^[A-Za-z0-9_-]{1,50}$/;
 var LOCK_TIMEOUT_MS = 10000;
@@ -38,6 +43,9 @@ function doPost(e) {
     switch (req.action) {
       case 'register':
         result = register(req);
+        break;
+      case 'login':
+        result = login(req);
         break;
       case 'getMyAnswers':
         result = getMyAnswers(req);
@@ -67,15 +75,32 @@ function doGet() {
 
 function register(req) {
   var username = normalizeUsername(req.username);
+  var password = normalizePassword(req.password);
   return withLock(function () {
     var sheet = getSheet(USERS_SHEET, USERS_HEADERS);
     if (findUserRow(sheet, username)) {
       throw new UserError('Username già in uso', 'USERNAME_TAKEN');
     }
     var token = Utilities.getUuid();
-    sheet.appendRow([safeCell(username), token, new Date()]);
+    sheet.appendRow([safeCell(username), token, new Date(), safeCell(password)]);
     return { ok: true, username: username, token: token };
   });
+}
+
+/** Returns the existing token, so every device of the same player shares it. */
+function login(req) {
+  var username = normalizeUsername(req.username);
+  var password = normalizePassword(req.password);
+  var sheet = getSheet(USERS_SHEET, USERS_HEADERS);
+  var row = findUserRow(sheet, username);
+  if (!row) {
+    throw new UserError('Username non trovato.', 'NOT_FOUND');
+  }
+  // Rows created before passwords existed have an empty cell until the admin fills it in.
+  if (!row[3] || row[3] !== password) {
+    throw new UserError('Password sbagliata.', 'BAD_PASSWORD');
+  }
+  return { ok: true, username: row[0], token: row[1] };
 }
 
 function getMyAnswers(req) {
@@ -128,7 +153,7 @@ function authenticate(req) {
   var sheet = getSheet(USERS_SHEET, USERS_HEADERS);
   var row = findUserRow(sheet, username);
   if (!row || !token || row[1] !== token) {
-    throw new UserError('Sessione non valida. Registrati di nuovo.', 'AUTH');
+    throw new UserError('Sessione non valida. Accedi di nuovo.', 'AUTH');
   }
   return { username: row[0] };
 }
@@ -143,7 +168,17 @@ function normalizeUsername(value) {
   return username;
 }
 
-/** Returns the [username, token, createdAt] row matching case-insensitively, or null. */
+function normalizePassword(value) {
+  var password = typeof value === 'string' ? value.trim() : '';
+  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
+    throw new UserError(
+      'La password deve avere tra ' + PASSWORD_MIN + ' e ' + PASSWORD_MAX + ' caratteri.'
+    );
+  }
+  return password;
+}
+
+/** Returns the [username, token, createdAt, password] row matching case-insensitively, or null. */
 function findUserRow(sheet, username) {
   var key = username.toLowerCase();
   var rows = readRows(sheet);
@@ -172,10 +207,18 @@ function getSheet(name, headers) {
     sheet = ss.insertSheet(name);
   }
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(headers);
     sheet.setFrozenRows(1);
-    // Plain-text format keeps answers like "007" from being turned into numbers.
-    sheet.getRange(1, 1, sheet.getMaxRows(), headers.length - 1).setNumberFormat('@');
+  }
+  var current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    // Set up only missing columns: a fresh sheet, or a column added in a later version.
+    if (current[i] !== '') continue;
+    sheet.getRange(1, i + 1).setValue(headers[i]);
+    // Plain-text format keeps values like "007" from being turned into numbers.
+    // Columns named *At hold dates and keep the default format.
+    if (!/At$/.test(headers[i])) {
+      sheet.getRange(1, i + 1, sheet.getMaxRows(), 1).setNumberFormat('@');
+    }
   }
   return sheet;
 }
