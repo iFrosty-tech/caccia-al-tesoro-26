@@ -2,6 +2,7 @@
   {
     "id": "p1",
     "title": "Enigma 1",
-    "text": "La soluzione al primo enigma è:"
+    "text": "La soluzione al primo enigma è:",
+    "audio": "audio/enigma-1.mp3"
   }
 ]

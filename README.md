@@ -36,6 +36,23 @@ Modifica [`puzzles.json`](puzzles.json) e fai push su `main`:
 - `id` deve essere unico e non va cambiato dopo la pubblicazione (le risposte sono legate all'id). Usa solo lettere, numeri, `-` e `_`.
 - Nel `text` puoi andare a capo con `\n`.
 
+### Audio (facoltativo)
+
+Un enigma può avere una traccia audio, che compare con un player tra il testo e la risposta:
+
+1. Metti il file nella cartella [`audio/`](audio/), preferibilmente MP3 a 128–160 kbps (pesa poco sulla rete mobile dei giocatori).
+2. Aggiungi il campo `audio` all'enigma, con il percorso relativo:
+
+```json
+{ "id": "p1", "title": "Titolo", "text": "Testo dell'enigma", "audio": "audio/enigma-1.mp3" }
+```
+
+Senza il campo `audio` l'enigma resta solo testo. I file WAV sono troppo pesanti (decine di MB): convertili prima in MP3, per esempio con ffmpeg:
+
+```sh
+ffmpeg -i in.wav -codec:a libmp3lame -b:a 160k -ar 44100 audio/enigma-N.mp3
+```
+
 ## 4. Vedere le risposte
 
 Apri il Google Sheet, foglio **`Answers`**: una riga per giocatore ed enigma (`username`, `puzzleId`, `answer`, `updatedAt`). Ogni modifica aggiorna la stessa riga.

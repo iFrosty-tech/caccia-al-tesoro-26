@@ -473,6 +473,218 @@ button:disabled {
   color: var(--error);
 }
 
+/* ---------- Riddle audio: a light to wake, a wake that grows as it plays ---------- */
+
+.audio-player {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  margin-bottom: 20px;
+}
+
+.audio-toggle {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  min-height: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  color: #e9feff;
+  background: radial-gradient(circle at 50% 35%, var(--wake-bright), var(--wake) 70%);
+  border-color: var(--light-soft);
+  box-shadow:
+    0 8px 22px -10px rgba(30, 139, 255, 0.95),
+    0 0 18px -6px rgba(102, 246, 255, 0.45);
+}
+
+.audio-toggle:hover {
+  box-shadow:
+    0 10px 26px -8px rgba(30, 139, 255, 1),
+    0 0 24px -4px rgba(102, 246, 255, 0.6);
+}
+
+.audio-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  filter: drop-shadow(0 0 4px rgba(233, 254, 255, 0.6));
+}
+
+.audio-icon-play {
+  translate: 1px 0; /* optical centre of the triangle */
+}
+
+/* .is-sounding, not .is-playing: body.is-playing already means "logged in". */
+.audio-icon-pause,
+.audio-player.is-sounding .audio-icon-play {
+  display: none;
+}
+
+.audio-player.is-sounding .audio-icon-pause {
+  display: block;
+}
+
+/* Playing: the light breathes. */
+.audio-player.is-sounding .audio-toggle {
+  border-color: rgba(102, 246, 255, 0.8);
+  animation: audio-breathe 2.8s ease-in-out infinite;
+}
+
+/* Buffering: same dimming pulse as a busy button, but still pressable. */
+.audio-player.is-loading .audio-toggle {
+  animation: dim-pulse 1.4s ease-in-out infinite;
+}
+
+.audio-player.is-error .audio-toggle {
+  animation: none;
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@keyframes audio-breathe {
+  50% {
+    box-shadow:
+      0 10px 26px -8px rgba(30, 139, 255, 1),
+      0 0 34px -2px rgba(102, 246, 255, 0.7);
+  }
+}
+
+.audio-track {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The range stays 44px tall for touch; only a 3px wake is drawn inside it. */
+.audio-seek {
+  --progress: 0%;
+  --wake-fill: linear-gradient(90deg, var(--wake-bright), var(--light));
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: pan-y;
+}
+
+.audio-seek:disabled {
+  cursor: default;
+}
+
+.audio-seek:focus-visible {
+  outline: none;
+}
+
+.audio-seek::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 3px;
+  background:
+    var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
+    rgba(143, 178, 204, 0.22);
+  box-shadow: 0 0 10px -2px rgba(102, 246, 255, 0.45);
+}
+
+.audio-seek::-moz-range-track {
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(143, 178, 204, 0.22);
+}
+
+.audio-seek::-moz-range-progress {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--wake-fill);
+  box-shadow: 0 0 10px -2px rgba(102, 246, 255, 0.6);
+}
+
+/* The thumb is the wake's bright head. */
+.audio-seek::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5.5px;
+  border: 0;
+  border-radius: 50%;
+  background: #e9feff;
+  box-shadow: 0 0 10px 1px var(--light);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: box-shadow 0.3s var(--ease-out), transform 0.25s var(--ease-out);
+}
+
+.audio-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #e9feff;
+  box-shadow: 0 0 10px 1px var(--light);
+  transition: box-shadow 0.3s var(--ease-out), transform 0.25s var(--ease-out);
+}
+
+.audio-seek:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+.audio-seek:active::-moz-range-thumb {
+  transform: scale(1.25);
+}
+
+/* Focus ring in the site's focus colour, drawn around the thumb. */
+.audio-seek:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px var(--abyss),
+    0 0 0 5px var(--light),
+    0 0 16px 2px var(--light);
+}
+
+.audio-seek:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px var(--abyss),
+    0 0 0 5px var(--light),
+    0 0 16px 2px var(--light);
+}
+
+.audio-seek:disabled::-webkit-slider-thumb {
+  background: var(--ghost);
+  box-shadow: none;
+}
+
+.audio-seek:disabled::-moz-range-thumb {
+  background: var(--ghost);
+  box-shadow: none;
+}
+
+.audio-time {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -8px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-player.is-sounding .audio-time span:first-child {
+  color: var(--light);
+}
+
+.audio-message {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--error);
+}
+
+.audio-message:empty {
+  display: none;
+}
+
 /* Riddles rest in the dark until they scroll into view. */
 .js .puzzle {
   transition:
