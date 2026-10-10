@@ -121,15 +121,19 @@
     else card.classList.add("lit");
   }
 
+  // The sea blooms around an element (plankton.js skips it under reduced motion).
+  function bloomAt(element) {
+    if (!window.Plankton) return;
+    const rect = element.getBoundingClientRect();
+    window.Plankton.bloom(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
   // Saved answer: the card flares and the sea blooms around the button.
   function celebrate(card, button) {
     card.classList.remove("saved");
     void card.offsetWidth; // restart the flare animation
     card.classList.add("saved");
-    if (window.Plankton) {
-      const rect = button.getBoundingClientRect();
-      window.Plankton.bloom(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    }
+    bloomAt(button);
   }
 
   // ---------- Audio player ----------
@@ -137,6 +141,7 @@
   const SVG_NS = "http://www.w3.org/2000/svg";
   const SEEK_STEP = 5; // seconds per arrow key press
   const NO_TIME = "–:––";
+  const START_WINDOW = 0.5; // seconds: a play this close to 0 counts as starting the track
 
   // Every rendered track, so only one plays at a time and views can silence them.
   const tracks = new Set();
@@ -199,8 +204,20 @@
       ])
     );
 
+    // The orb carries the light around the button: halo, ripples, searching arc.
+    const orb = document.createElement("span");
+    orb.className = "audio-orb";
+    orb.append(toggle);
+
     const track = document.createElement("div");
     track.className = "audio-track";
+
+    // The bar holds the seek range and the glint that travels along its played part.
+    const bar = document.createElement("div");
+    bar.className = "audio-bar";
+    const glint = document.createElement("span");
+    glint.className = "audio-glint";
+    glint.setAttribute("aria-hidden", "true");
 
     // Disabled until the duration is known: there is nothing to seek before that.
     const seek = document.createElement("input");
@@ -232,7 +249,7 @@
       const duration = audio.duration;
       const ratio = Number.isFinite(duration) && duration > 0 ? seconds / duration : 0;
       seek.value = String(seconds);
-      seek.style.setProperty("--progress", Math.min(100, ratio * 100) + "%");
+      bar.style.setProperty("--progress", Math.min(100, ratio * 100) + "%");
       elapsed.textContent = formatTime(seconds);
       seek.setAttribute("aria-valuetext", formatTime(seconds) + " di " + formatTime(duration));
     }
@@ -294,6 +311,8 @@
       tracks.forEach((other) => {
         if (other !== audio) other.pause();
       });
+      // The riddle's voice begins: the sea answers once, not on every resume.
+      if (audio.currentTime < START_WINDOW) bloomAt(toggle);
       player.classList.add("is-sounding");
       toggle.setAttribute("aria-label", "Metti in pausa");
     });
@@ -324,8 +343,9 @@
       message.textContent = "Impossibile caricare l'audio.";
     });
 
-    track.append(seek, time);
-    player.append(audio, toggle, track, message);
+    bar.append(seek, glint);
+    track.append(bar, time);
+    player.append(audio, orb, track, message);
     return player;
   }
 

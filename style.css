@@ -473,14 +473,48 @@ button:disabled {
   color: var(--error);
 }
 
-/* ---------- Riddle audio: a light to wake, a wake that grows as it plays ---------- */
+/* ---------- Riddle audio: an orb of light that sends pulses down its wake ---------- */
 
 .audio-player {
+  /* One beat while sounding: the orb ripples, light runs down the wake, the head flares. */
+  --pulse: 2.8s;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   column-gap: 14px;
   margin-bottom: 20px;
+}
+
+/* The orb carries the light around the button: halo, ripples, searching arc. */
+.audio-orb {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: 52px;
+  height: 52px;
+}
+
+.audio-orb::before,
+.audio-orb::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Ripple while sounding, searching arc while loading; dark otherwise. */
+.audio-orb::before {
+  inset: 0;
+  opacity: 0;
+}
+
+/* Halo: the water around the orb glows while the riddle speaks. */
+.audio-orb::after {
+  inset: -16px;
+  background: radial-gradient(closest-side, rgba(102, 246, 255, 0.36), rgba(30, 139, 255, 0.16) 60%, transparent);
+  opacity: 0;
+  transition: opacity 0.9s var(--ease-out);
 }
 
 .audio-toggle {
@@ -497,6 +531,11 @@ button:disabled {
   box-shadow:
     0 8px 22px -10px rgba(30, 139, 255, 0.95),
     0 0 18px -6px rgba(102, 246, 255, 0.45);
+  transition:
+    transform 0.25s var(--ease-out),
+    box-shadow 0.4s var(--ease-out),
+    border-color 0.6s var(--ease-out),
+    opacity 0.6s var(--ease-out);
 }
 
 .audio-toggle:hover {
@@ -505,11 +544,22 @@ button:disabled {
     0 0 24px -4px rgba(102, 246, 255, 0.6);
 }
 
+/* Press: the orb gives under the thumb, quickly. */
+.audio-toggle:active {
+  transform: scale(0.9);
+  transition-duration: 0.1s;
+}
+
+/* Both icons share one cell and turn into each other. */
 .audio-icon {
+  grid-area: 1 / 1;
   width: 22px;
   height: 22px;
   fill: currentColor;
   filter: drop-shadow(0 0 4px rgba(233, 254, 255, 0.6));
+  transition:
+    opacity 0.2s var(--ease-out),
+    transform 0.35s var(--ease-out);
 }
 
 .audio-icon-play {
@@ -517,26 +567,69 @@ button:disabled {
 }
 
 /* .is-sounding, not .is-playing: body.is-playing already means "logged in". */
-.audio-icon-pause,
+.audio-icon-pause {
+  opacity: 0;
+  transform: scale(0.4) rotate(-90deg);
+}
+
 .audio-player.is-sounding .audio-icon-play {
-  display: none;
+  opacity: 0;
+  transform: scale(0.4) rotate(90deg);
 }
 
 .audio-player.is-sounding .audio-icon-pause {
-  display: block;
+  opacity: 1;
+  transform: none;
 }
 
-/* Playing: the light breathes. */
+/* Sounding: the orb is fully lit and the water around it glows. */
 .audio-player.is-sounding .audio-toggle {
   border-color: rgba(102, 246, 255, 0.8);
-  animation: audio-breathe 2.8s ease-in-out infinite;
 }
 
-/* Buffering: same dimming pulse as a busy button, but still pressable. */
+.audio-player.is-sounding .audio-orb::after {
+  opacity: 1;
+}
+
+.audio-player.is-sounding:not(.is-loading) .audio-orb::before {
+  border: 1px solid rgba(102, 246, 255, 0.7);
+  box-shadow: 0 0 12px rgba(102, 246, 255, 0.35);
+  animation: audio-ripple var(--pulse) var(--ease-out) infinite;
+}
+
+@keyframes audio-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  55%,
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+
+/* Buffering: a light circles the orb, searching the dark; the button stays pressable. */
+.audio-player.is-loading .audio-orb::before {
+  inset: -5px;
+  opacity: 1;
+  background: conic-gradient(transparent 55%, rgba(30, 139, 255, 0.5) 80%, var(--light));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  animation: audio-search 1.4s linear infinite;
+}
+
 .audio-player.is-loading .audio-toggle {
-  animation: dim-pulse 1.4s ease-in-out infinite;
+  opacity: 0.8;
 }
 
+@keyframes audio-search {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Error: the light goes out quietly; the message below says why. */
 .audio-player.is-error .audio-toggle {
   animation: none;
   opacity: 0.4;
@@ -544,24 +637,26 @@ button:disabled {
   box-shadow: none;
 }
 
-@keyframes audio-breathe {
-  50% {
-    box-shadow:
-      0 10px 26px -8px rgba(30, 139, 255, 1),
-      0 0 34px -2px rgba(102, 246, 255, 0.7);
-  }
-}
-
 .audio-track {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  transition: opacity 0.6s var(--ease-out);
+}
+
+.audio-player.is-error .audio-track {
+  opacity: 0.45;
+}
+
+.audio-bar {
+  --progress: 0%;
+  position: relative;
 }
 
 /* The range stays 44px tall for touch; only a 3px wake is drawn inside it. */
 .audio-seek {
-  --progress: 0%;
   --wake-fill: linear-gradient(90deg, var(--wake-bright), var(--light));
+  display: block;
   width: 100%;
   height: 44px;
   margin: 0;
@@ -659,19 +754,88 @@ button:disabled {
   box-shadow: none;
 }
 
+/* A glint of light runs along the played wake, from the orb to the head... */
+.audio-glint {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--progress);
+  height: 10px;
+  margin-top: -5px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.audio-glint::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(closest-side, #f2feff, rgba(102, 246, 255, 0.55) 45%, transparent) 100% 50% / 40px 100% no-repeat;
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+.audio-player.is-sounding:not(.is-loading) .audio-glint::before {
+  animation: audio-glint var(--pulse) cubic-bezier(0.5, 0, 0.3, 1) infinite;
+}
+
+/* ...and the head flares as the glint reaches it (unless the focus ring is showing). */
+.audio-player.is-sounding:not(.is-loading) .audio-seek:not(:focus-visible)::-webkit-slider-thumb {
+  animation: audio-head var(--pulse) ease-out infinite;
+}
+
+.audio-player.is-sounding:not(.is-loading) .audio-seek:not(:focus-visible)::-moz-range-thumb {
+  animation: audio-head var(--pulse) ease-out infinite;
+}
+
+@keyframes audio-glint {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  12% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  72%,
+  100% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+}
+
+@keyframes audio-head {
+  0%,
+  52%,
+  100% {
+    box-shadow: 0 0 10px 1px var(--light);
+  }
+  64% {
+    box-shadow: 0 0 18px 5px var(--light);
+  }
+}
+
 .audio-time {
   display: flex;
   justify-content: space-between;
   margin-top: -8px;
   font-size: 0.8125rem;
   line-height: 1.4;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
+.audio-time span {
+  transition: color 0.6s var(--ease-out), text-shadow 0.6s var(--ease-out);
+}
+
 .audio-player.is-sounding .audio-time span:first-child {
   color: var(--light);
+  text-shadow: 0 0 10px rgba(102, 246, 255, 0.45);
 }
 
 .audio-message {
@@ -710,6 +874,41 @@ button:disabled {
 
 .js .puzzle.lit::before {
   transform: scaleX(1);
+}
+
+/* Inside an igniting card the player wakes after the text: the orb lights, then its wake draws itself. */
+.js .puzzle .audio-orb {
+  transition:
+    opacity 0.9s var(--ease-out),
+    transform 0.9s var(--ease-out),
+    filter 0.9s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 140ms + 450ms);
+}
+
+.js .puzzle .audio-seek {
+  clip-path: inset(-20px -20px -20px -20px);
+  transition: clip-path 1.4s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 140ms + 650ms);
+}
+
+.js .puzzle .audio-time {
+  transition: opacity 0.9s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 140ms + 1000ms);
+}
+
+.js .puzzle:not(.lit) .audio-orb {
+  opacity: 0;
+  transform: scale(0.6);
+  filter: blur(6px);
+}
+
+.js .puzzle:not(.lit) .audio-seek {
+  clip-path: inset(-20px 100% -20px -20px);
+}
+
+.js .puzzle:not(.lit) .audio-time,
+.js .puzzle:not(.lit) .audio-glint {
+  opacity: 0;
 }
 
 /* Answer saved: the panel flares, then settles back into the dark. */
@@ -859,5 +1058,16 @@ code {
     opacity: 1;
     filter: none;
     transform: none;
+  }
+
+  .js .puzzle:not(.lit) .audio-orb,
+  .js .puzzle:not(.lit) .audio-time {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+
+  .js .puzzle:not(.lit) .audio-seek {
+    clip-path: none;
   }
 }
