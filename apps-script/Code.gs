@@ -223,9 +223,13 @@ function getSheet(name, headers) {
   return sheet;
 }
 
-/** Prevents formula injection: values starting with = + - @ get an apostrophe prefix. */
+/**
+ * Forces a literal text cell with an apostrophe prefix (stripped by Sheets): prevents formula
+ * injection and keeps values like "007" from being parsed as numbers, which the '@' column
+ * format alone does not prevent on appendRow/setValues.
+ */
 function safeCell(value) {
-  return /^[=+\-@]/.test(value) ? "'" + value : value;
+  return "'" + value;
 }
 
 /** Defensive inverse of safeCell, in case the apostrophe is returned by the sheet. */

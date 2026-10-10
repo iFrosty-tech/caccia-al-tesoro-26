@@ -49,4 +49,5 @@ Dopo aver modificato `Code.gs`, per mantenere lo **stesso URL** usa **Esegui il 
 - Dopo **Esci**, cancellando i dati del browser o cambiando dispositivo, il giocatore rientra con **Accedi** usando username e password: l'account e le risposte non si perdono.
 - Password dimenticata: l'amministratore la legge (o la cambia) nella colonna `password` del foglio **`Users`**.
 - Gli utenti registrati prima dell'introduzione delle password hanno la colonna `password` vuota e non possono usare **Accedi** finché l'amministratore non ne scrive una.
+- Quando scrivi a mano una password nel foglio, mettici davanti un apostrofo se sembra un numero o una data (es. `'007`), altrimenti Sheets la converte (`7`) e il login fallisce.
 - Per liberare uno username, l'amministratore cancella la riga corrispondente nel foglio **`Users`** (le risposte già date restano in `Answers` e verranno riassociate a chi si registra di nuovo con quel nome).
