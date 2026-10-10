@@ -98,9 +98,44 @@
     return Array.isArray(puzzles) ? puzzles : [];
   }
 
+  // ---------- Light effects (visual only) ----------
+
+  // Riddle cards stay dark until they scroll into view, then ignite.
+  const igniter =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add("lit");
+              igniter.unobserve(entry.target);
+            });
+          },
+          { rootMargin: "0px 0px -8% 0px", threshold: 0.15 }
+        )
+      : null;
+
+  function ignite(card, index) {
+    card.style.setProperty("--i", String(Math.min(index, 4)));
+    if (igniter) igniter.observe(card);
+    else card.classList.add("lit");
+  }
+
+  // Saved answer: the card flares and the sea blooms around the button.
+  function celebrate(card, button) {
+    card.classList.remove("saved");
+    void card.offsetWidth; // restart the flare animation
+    card.classList.add("saved");
+    if (window.Plankton) {
+      const rect = button.getBoundingClientRect();
+      window.Plankton.bloom(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+  }
+
   // ---------- Views ----------
 
   function showRegister() {
+    document.body.classList.remove("is-playing");
     els.userBar.hidden = true;
     els.puzzlesSection.hidden = true;
     els.puzzlesList.replaceChildren();
@@ -110,6 +145,7 @@
 
   async function showPuzzles(session) {
     els.registerSection.hidden = true;
+    document.body.classList.add("is-playing");
     els.userName.textContent = session.username;
     els.userBar.hidden = false;
     els.puzzlesSection.hidden = false;
@@ -140,8 +176,10 @@
       return;
     }
     els.puzzlesStatus.textContent = "";
-    puzzles.forEach((puzzle) => {
-      els.puzzlesList.appendChild(renderPuzzle(puzzle, answers[puzzle.id] || "", session));
+    puzzles.forEach((puzzle, index) => {
+      const card = renderPuzzle(puzzle, answers[puzzle.id] || "", session);
+      els.puzzlesList.appendChild(card);
+      ignite(card, index);
     });
   }
 
@@ -199,6 +237,7 @@
         });
         status.textContent = "Salvato ✓";
         status.className = "save-status ok";
+        celebrate(card, button);
       } catch (err) {
         if (err instanceof ApiError && err.code === "AUTH") {
           logout();

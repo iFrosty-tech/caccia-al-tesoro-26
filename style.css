@@ -1,187 +1,531 @@
-:root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --text: #1d1d1f;
-  --muted: #6b6b70;
-  --border: #dddcd7;
-  --accent: #b5651d;
-  --accent-text: #ffffff;
-  --ok: #1f7a3a;
-  --error: #b42318;
-  --radius: 10px;
-  color-scheme: light dark;
-}
+/* Night sea world: abyss ground, living plankton light, thin luminous type. */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161618;
-    --surface: #222225;
-    --text: #ececec;
-    --muted: #a0a0a6;
-    --border: #38383d;
-    --accent: #e0914a;
-    --accent-text: #161618;
-    --ok: #5cc27b;
-    --error: #f27a6e;
-  }
+:root {
+  --abyss: #03060b;
+  --deep: #0a1422;
+  --ghost: #1a2b3f;
+  --panel: rgba(10, 20, 34, 0.62);
+  --panel-edge: rgba(102, 246, 255, 0.14);
+  --field: rgba(3, 6, 11, 0.6);
+  --field-edge: rgba(143, 178, 204, 0.28);
+  --wake: #0b6ae0;
+  --wake-bright: #1e8bff;
+  --light: #66f6ff;
+  --light-soft: rgba(102, 246, 255, 0.35);
+  --text: #e6f4ff;
+  --muted: #8fb2cc;
+  --placeholder: #7d9bb3;
+  --error: #ff8f86;
+  --radius: 18px;
+  --radius-control: 12px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --display: "Josefin Sans", "Futura", "Century Gothic", sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  accent-color: var(--light);
+  scrollbar-color: var(--ghost) transparent;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
-  background: var(--bg);
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 400 1rem/1.6 var(--body);
+  background-color: var(--abyss);
+  /* Depth beneath the plankton: deeper water rising from below. */
+  background-image:
+    radial-gradient(120% 60% at 50% 115%, rgba(11, 60, 120, 0.42), transparent 70%),
+    radial-gradient(80% 40% at 15% -10%, rgba(26, 43, 63, 0.55), transparent 70%);
+  background-attachment: fixed;
+  overflow-x: hidden;
 }
 
-.site-header,
-main {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 16px;
+::selection {
+  background: rgba(102, 246, 255, 0.28);
+  color: #ffffff;
 }
 
-.site-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-h1 {
-  margin: 0;
-  font-size: 1.5rem;
+::-webkit-scrollbar-thumb {
+  background: var(--ghost);
+  border-radius: 8px;
 }
 
-h2 {
-  margin: 0 0 8px;
-  font-size: 1.15rem;
-}
-
-.user-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.sea {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: -1;
+  pointer-events: none;
 }
 
 [hidden] {
   display: none !important;
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
+/* ---------- Header: hero on login, compact while playing ---------- */
+
+.site-header,
+main {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
 }
 
-.puzzle-text {
-  white-space: pre-line;
-  margin: 0 0 12px;
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-}
-
-/* Login form: inputs stacked full width, buttons sharing the last row. */
-.stack {
+.site-header {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  justify-content: center;
+  padding-top: max(40px, env(safe-area-inset-top));
+  padding-bottom: 24px;
 }
 
-.stack input {
-  flex: none;
-}
-
-.stack .row button {
-  flex: 1;
-}
-
-input[type="text"],
-input[type="password"] {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 12px;
-  font: inherit;
+.title {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 200;
+  font-size: clamp(3.6rem, 19vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
   color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  text-shadow:
+    0 0 1px rgba(230, 244, 255, 0.9),
+    0 0 22px rgba(102, 246, 255, 0.38);
 }
 
-input[type="text"]:focus-visible,
-input[type="password"]:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.title-line {
+  display: block;
 }
 
-button {
-  padding: 10px 16px;
-  font: inherit;
+.title-al {
+  margin: 0.05em 0 0.02em 1.6em;
+  font-size: 0.5em;
+  font-style: italic;
+  color: var(--light);
+  text-shadow: 0 0 18px rgba(102, 246, 255, 0.6);
+}
+
+.wake {
+  display: block;
+  width: min(100%, 22rem);
+  height: auto;
+  margin-top: 0.1em;
+  overflow: visible;
+}
+
+.wake-path {
+  fill: none;
+  stroke: url(#wake-gradient);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(102, 246, 255, 0.7));
+}
+
+.wake-head {
+  fill: #e9feff;
+  filter: drop-shadow(0 0 6px var(--light));
+}
+
+.user-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 4px 4px 4px 14px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.user-bar strong {
+  color: var(--text);
   font-weight: 600;
-  color: var(--accent-text);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  cursor: pointer;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: progress;
+/* Playing: the title condenses into one quiet line at the top. */
+.is-playing .site-header {
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-bottom: 14px;
+  background: linear-gradient(var(--abyss) 40%, rgba(3, 6, 11, 0));
 }
 
-.btn-secondary {
-  padding: 6px 12px;
-  color: var(--text);
-  background: transparent;
-  border-color: var(--border);
-  font-weight: 500;
+.is-playing .title {
+  flex-direction: row;
+  gap: 0.28em;
+  font-size: clamp(1.15rem, 5.2vw, 1.5rem);
+  white-space: nowrap;
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.is-playing .title-al {
+  margin: 0;
+  font-size: 1em;
+}
+
+.is-playing .wake {
+  display: none;
+}
+
+/* ---------- Main ---------- */
+
+main {
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+}
+
+.is-playing main {
+  flex: 1;
+}
+
+h2 {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-weight: 300;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
 }
 
 .muted {
   color: var(--muted);
 }
 
-.error {
-  color: var(--error);
-  margin: 8px 0 0;
-  min-height: 1.5em;
+.card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  padding: 22px 20px 20px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.8);
+}
+
+/* A hairline of light along the top edge of every panel. */
+.card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(102, 246, 255, 0.55), transparent);
+  pointer-events: none;
+}
+
+.panel .muted {
+  margin-bottom: 18px;
+  font-size: 0.95rem;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stack .row {
+  margin-top: 6px;
+}
+
+.stack .row button {
+  flex: 1;
 }
 
 .hint {
-  margin: 8px 0 0;
-  font-size: 0.9rem;
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+
+.error {
+  margin-top: 10px;
+  min-height: 1.6em;
+  color: var(--error);
+  font-size: 0.95rem;
+}
+
+.error:empty {
+  margin-top: 0;
+  min-height: 0;
+}
+
+/* ---------- Controls ---------- */
+
+input[type="text"],
+input[type="password"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 50px;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 1rem; /* 16px keeps iOS from zooming on focus */
+  color: var(--text);
+  caret-color: var(--light);
+  background: var(--field);
+  border: 1px solid var(--field-edge);
+  border-radius: var(--radius-control);
+  transition:
+    border-color 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out),
+    background-color 0.4s var(--ease-out);
+}
+
+input::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: rgba(102, 246, 255, 0.8);
+  background: rgba(6, 16, 28, 0.85);
+  box-shadow:
+    0 0 0 3px rgba(102, 246, 255, 0.12),
+    0 0 24px -4px rgba(102, 246, 255, 0.45);
+}
+
+button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 50px;
+  padding: 12px 20px;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background: var(--wake);
+  border: 1px solid rgba(102, 246, 255, 0.45);
+  border-radius: var(--radius-control);
+  box-shadow: 0 10px 28px -12px rgba(30, 139, 255, 0.9);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    transform 0.25s var(--ease-out),
+    box-shadow 0.4s var(--ease-out),
+    border-color 0.4s var(--ease-out);
+}
+
+/* Light sweeping through the button like a wake passing under it. */
+button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(190, 252, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.8s var(--ease-out);
+  pointer-events: none;
+}
+
+button:hover::after,
+button:focus-visible::after,
+button:active::after {
+  transform: translateX(120%);
+}
+
+button:hover {
+  box-shadow: 0 12px 32px -10px rgba(30, 139, 255, 1);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--light);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: progress;
+  animation: dim-pulse 1.4s ease-in-out infinite;
+}
+
+.btn-secondary {
+  color: var(--text);
+  background: rgba(3, 6, 11, 0.35);
+  border-color: var(--field-edge);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(102, 246, 255, 0.6);
+  box-shadow: 0 0 20px -6px rgba(102, 246, 255, 0.5);
+}
+
+.user-bar .btn-secondary {
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: 999px;
+}
+
+@keyframes dim-pulse {
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 26px -6px rgba(102, 246, 255, 0.7);
+  }
+}
+
+/* ---------- Riddles ---------- */
+
+.puzzles-status:empty {
+  display: none;
+}
+
+.puzzles-status {
+  padding: 32px 0;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 300;
+  font-size: 1.25rem;
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    color: var(--text);
+    text-shadow: 0 0 16px var(--light-soft);
+  }
+}
+
+.puzzles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 8px;
+}
+
+.puzzle h2 {
+  font-size: 2rem;
+  font-weight: 200;
+  margin-bottom: 12px;
+  text-shadow: 0 0 18px rgba(102, 246, 255, 0.3);
+}
+
+.puzzle-text {
+  max-width: 60ch;
+  margin-bottom: 18px;
+  white-space: pre-line;
+  font-size: 1.0625rem;
+  line-height: 1.65;
 }
 
 .save-status {
-  margin: 8px 0 0;
+  margin-top: 10px;
   min-height: 1.5em;
   font-size: 0.9rem;
   color: var(--muted);
 }
 
 .save-status.ok {
-  color: var(--ok);
+  color: var(--light);
+  text-shadow: 0 0 12px rgba(102, 246, 255, 0.55);
 }
 
 .save-status.error {
   color: var(--error);
 }
 
+/* Riddles rest in the dark until they scroll into view. */
+.js .puzzle {
+  transition:
+    opacity 1.2s var(--ease-out),
+    filter 1.2s var(--ease-out),
+    transform 1.2s var(--ease-out),
+    border-color 0.8s var(--ease-out),
+    box-shadow 0.8s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 140ms);
+}
+
+.js .puzzle:not(.lit) {
+  opacity: 0.25;
+  filter: blur(4px) brightness(0.6);
+  transform: translateY(18px);
+}
+
+.js .puzzle::before {
+  transform: scaleX(0);
+  transition: transform 1.4s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 140ms + 200ms);
+}
+
+.js .puzzle.lit::before {
+  transform: scaleX(1);
+}
+
+/* Answer saved: the panel flares, then settles back into the dark. */
+.puzzle.saved {
+  animation: flare 1.6s var(--ease-out);
+}
+
+@keyframes flare {
+  0% {
+    border-color: rgba(102, 246, 255, 0.9);
+    box-shadow:
+      0 0 0 1px rgba(102, 246, 255, 0.5),
+      0 0 48px -6px rgba(102, 246, 255, 0.6);
+  }
+  100% {
+    border-color: var(--panel-edge);
+    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* ---------- Notices & misc ---------- */
+
 .notice {
-  padding: 12px 16px;
-  border-radius: var(--radius);
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-control);
   border: 1px solid currentColor;
+  background: rgba(40, 10, 12, 0.6);
 }
 
 .notice-error {
@@ -190,6 +534,7 @@ button:disabled {
 
 code {
   font-family: ui-monospace, Consolas, monospace;
+  color: var(--text);
 }
 
 .visually-hidden {
@@ -199,4 +544,108 @@ code {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* ---------- Entrance: the title is written in light ---------- */
+
+.js .title-line {
+  animation: ignite 1.8s var(--ease-out) both;
+  animation-delay: calc(200ms + var(--i) * 220ms);
+}
+
+.js .wake-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-wake 1.6s var(--ease-out) 900ms forwards;
+}
+
+.js .wake-head {
+  opacity: 0;
+  animation: appear 0.6s var(--ease-out) 2.2s forwards;
+}
+
+.js #register-section,
+.js .notice {
+  animation: rise 1.2s var(--ease-out) 1.3s both;
+}
+
+.js .is-playing .title-line {
+  animation: ignite-compact 1.2s var(--ease-out) both;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+.js .user-bar {
+  animation: rise 1s var(--ease-out) 0.3s both;
+}
+
+@keyframes ignite {
+  from {
+    opacity: 0;
+    filter: blur(14px);
+    text-shadow: none;
+  }
+}
+
+/* Same light, separate name so the animation replays when the view changes. */
+@keyframes ignite-compact {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    text-shadow: none;
+  }
+}
+
+@keyframes draw-wake {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* ---------- Larger screens ---------- */
+
+@media (min-width: 720px) {
+  .site-header {
+    padding-top: 12vh;
+  }
+
+  .card {
+    padding: 28px 28px 24px;
+  }
+
+  .puzzle h2 {
+    font-size: 2.4rem;
+  }
+}
+
+/* ---------- Reduced motion: still sea, no entrances ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .js .puzzle:not(.lit) {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
 }

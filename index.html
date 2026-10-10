@@ -2,13 +2,45 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#03060b">
+  <meta name="color-scheme" content="dark">
   <title>Caccia al Tesoro</title>
+  <script>document.documentElement.classList.add("js");</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Josefin+Sans:ital,wght@0,200;0,300;0,400;1,200&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!--
+    THESIS: the hunt happens in a black night sea; darkness hides the riddles and living light reveals them. Refuses the parchment-map treasure hunt and the neon hacker terminal.
+    OWN-WORLD: abyss #03060b ground, deep current #0a1422 / ghost trace #1a2b3f translucent panels with blue hairlines, electric wake blue for the primary action, luminescent cyan #66f6ff for focus, success and light; thin Josefin Sans display, Figtree body; glow marks state.
+    STORY: the player arrives in the dark sea, the title is written in light, they identify themselves, riddles ignite one by one, and saving an answer releases a bloom of light.
+    FIRST VIEWPORT: full-bleed living plankton canvas; huge thin stacked title with a glowing wake curve; login panel low in the thumb zone.
+    FORM: bioluminescent plankton wake (user-chosen challenger), seed key 5f921f41.
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+  -->
+  <canvas id="sea" class="sea" aria-hidden="true"></canvas>
+
   <header class="site-header">
-    <h1>Caccia al Tesoro</h1>
+    <h1 class="title" aria-label="Caccia al Tesoro">
+      <span class="title-line" style="--i: 0" aria-hidden="true">Caccia</span>
+      <span class="title-line title-al" style="--i: 1" aria-hidden="true">al</span>
+      <span class="title-line" style="--i: 2" aria-hidden="true">Tesoro</span>
+      <svg class="wake" viewBox="0 0 320 64" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="wake-gradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#1e8bff" stop-opacity="0"></stop>
+            <stop offset="0.55" stop-color="#1e8bff" stop-opacity="0.7"></stop>
+            <stop offset="1" stop-color="#66f6ff"></stop>
+          </linearGradient>
+        </defs>
+        <path class="wake-path" pathLength="1"
+              d="M2 52 C 60 62, 110 30, 170 36 S 270 30, 308 10"></path>
+        <circle class="wake-head" cx="308" cy="10" r="3.2"></circle>
+      </svg>
+    </h1>
     <div id="user-bar" class="user-bar" hidden>
       <span>Ciao, <strong id="user-name"></strong></span>
       <button id="logout-btn" type="button" class="btn-secondary">Esci</button>
@@ -21,7 +53,7 @@
       <code>config.js</code> (vedi README).
     </p>
 
-    <section id="register-section" class="card" hidden>
+    <section id="register-section" class="card panel" hidden>
       <h2>Entra o registrati</h2>
       <p class="muted">Accedi con username e password, oppure registrati se è la prima volta.</p>
       <form id="register-form" class="stack">
@@ -33,19 +65,20 @@
                maxlength="50" required placeholder="La tua password">
         <div class="row">
           <button type="submit" value="login">Accedi</button>
-          <button type="submit" value="register">Registrati</button>
+          <button type="submit" value="register" class="btn-secondary">Registrati</button>
         </div>
       </form>
       <p id="register-error" class="error" role="alert"></p>
     </section>
 
     <section id="puzzles-section" hidden>
-      <p id="puzzles-status" class="muted" role="status"></p>
-      <div id="puzzles-list"></div>
+      <p id="puzzles-status" class="muted puzzles-status" role="status"></p>
+      <div id="puzzles-list" class="puzzles-list"></div>
     </section>
   </main>
 
   <script src="config.js"></script>
+  <script src="plankton.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
