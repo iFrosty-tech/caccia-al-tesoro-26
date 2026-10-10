@@ -33,6 +33,9 @@ single-pr (small feature)
 - clasp create (bound Sheet), push, deploy @1 done; API_URL set in config.js.
 - Endpoint check: returns "Accesso negato / autorizzazione necessaria" until owner authorizes scopes once.
 
+- Owner authorized scopes. E2E via curl: register OK, duplicate (case-insensitive) rejected, save + update OK, getMyAnswers returns own answers, wrong token rejected (AUTH). Formula-like answer "=007" round-trips intact.
+- Pages live: index, config.js (with API URL), puzzles.json all 200. Browser UI not driven manually.
+
 ## Next step
-Owner opens the /exec URL once in browser and grants permissions; then re-test endpoint.
+Delete test user `zz_test` rows from "Users" and "Answers". Replace example puzzles in puzzles.json.
 Redeploy after Code.gs changes: `clasp push -f && clasp deploy -i <deploymentId>` to keep the same URL.
