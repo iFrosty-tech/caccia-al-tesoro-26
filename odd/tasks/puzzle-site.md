@@ -25,5 +25,14 @@ single-pr (small feature)
 - Not verified: live Apps Script calls and browser flow (needs admin deployment).
 - Known limits (documented in README): logout or device change loses token → admin deletes row in "Users"; re-registered username inherits old "Answers" rows.
 
+- T1 commit 86abca9; native review (4 lenses) approved and acknowledged, 12 non-blocking advisory findings.
+- T2 commit 7387f0a: Apps Script manifest (web app, anonymous access) + .gitignore for clasp files.
+- main pushed; GitHub Pages enabled: https://ifrosty-tech.github.io/caccia-al-tesoro-26/
+- clasp 3.4.1 installed globally.
+
+- clasp create (bound Sheet), push, deploy @1 done; API_URL set in config.js.
+- Endpoint check: returns "Accesso negato / autorizzazione necessaria" until owner authorizes scopes once.
+
 ## Next step
-Admin deploys Apps Script, pastes URL in `config.js`, enables GitHub Pages on `main`.
+Owner opens the /exec URL once in browser and grants permissions; then re-test endpoint.
+Redeploy after Code.gs changes: `clasp push -f && clasp deploy -i <deploymentId>` to keep the same URL.
