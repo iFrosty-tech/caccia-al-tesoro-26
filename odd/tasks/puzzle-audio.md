@@ -32,5 +32,7 @@ single-pr (~250 lines forecast)
 - Design note: player state class is `is-sounding`, not `is-playing`, because `body.is-playing` already means "logged in".
 - T1 evidence: `node --check app.js` OK; `JSON.parse(puzzles.json)` OK; headless Chrome 155 harness (scratchpad server serving the repo, stubbed API fetch, fake session, extra test puzzles) at 390px, 320px and 1280px: p1 shows player with duration 4:16 and max 256; puzzle without `audio` renders unchanged (3 cards, 2 players); missing file shows the error state and message; clicking play switches to the pause icon, label "Metti in pausa" and `is-sounding`. Not verified: actual audible playback and seeking (the Python test server lacks HTTP Range support); real-device iOS/Android check pending.
 
+- T0+T1 commit 3360eea. Review assess: medium, slice_budget_reached → consent granted → native review (1 lens, reliability) approved and acknowledged (lineage review-a40ae20e733a736d). Advisory follow-ups (non-blocking): R3-duration-once (app.js:280, duration read only on `loadedmetadata`), R3-error-terminal (app.js:317, error state has no retry), R3-scrub-latch (app.js:262, `scrubbing` stays true if `change` never fires), R3-unverified-playback (real-device check).
+
 ## Next step
 Real-device check (iPhone/Android): play, pause, seek on GitHub Pages after merge.
