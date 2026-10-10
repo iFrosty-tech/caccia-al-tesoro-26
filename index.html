@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caccia al Tesoro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>Caccia al Tesoro</h1>
+    <div id="user-bar" class="user-bar" hidden>
+      <span>Ciao, <strong id="user-name"></strong></span>
+      <button id="logout-btn" type="button" class="btn-secondary">Esci</button>
+    </div>
+  </header>
+
+  <main>
+    <p id="config-warning" class="notice notice-error" hidden>
+      Il sito non è ancora configurato: inserisci l'URL della Web App di Apps Script in
+      <code>config.js</code> (vedi README).
+    </p>
+
+    <section id="register-section" class="card" hidden>
+      <h2>Registrati</h2>
+      <p class="muted">Scegli uno username per partecipare. Verrà ricordato su questo dispositivo.</p>
+      <form id="register-form" class="row">
+        <label for="username-input" class="visually-hidden">Username</label>
+        <input id="username-input" name="username" type="text" autocomplete="nickname"
+               minlength="2" maxlength="30" required placeholder="Il tuo username">
+        <button type="submit">Entra</button>
+      </form>
+      <p id="register-error" class="error" role="alert"></p>
+    </section>
+
+    <section id="puzzles-section" hidden>
+      <p id="puzzles-status" class="muted" role="status"></p>
+      <div id="puzzles-list"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
