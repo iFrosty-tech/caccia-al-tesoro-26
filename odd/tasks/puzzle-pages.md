@@ -37,5 +37,7 @@ single-pr (~350 lines forecast)
   - `node …/impeccable/scripts/detect.mjs --json style.css app.js`: `[]`.
   - Headless Chrome 155 over CDP (scratchpad `harness.mjs`, fetch stub, 3 harness-only puzzles, reduced motion and `--motion` runs): 28/28 checks PASS on repeated runs, no console errors — no horizontal overflow at 320/390/1280 (index, riddle page, long username); counter `1 / 3`; tile → `#/enigma/p1` with heading focus, pre-filled answer, audio player; back/forward; save → `Salvato ✓`, trimmed input, index `2 / 3` with the new clue and no extra `getMyAnswers`; unknown id → `#/` + notice; logged-out deep link → login → lands on the riddle; logout from a riddle → login, route cleared, no `<audio>` left.
 
+- T1 commit 1584124. Assess: medium, slice_budget_reached (711 lines; untracked .atl/ .impeccable/ excluded) -> consent granted -> native review (1 lens, reliability) approved and acknowledged (lineage review-22d99149ef6e2e76, authority burned). Advisory follow-ups (non-blocking): R3-save-reads-live-input (app.js:694, local answer rebuilt from live input instead of the submitted value), R3-save-after-navigate-stale-index (app.js:691, save resolving after navigating back leaves index stale and freshId dangling), R3-no-committed-tests (router checks live only in the scratchpad harness).
+
 ## Next step
-Parent spot check done (node --check app.js OK; screenshots index-390, riddle-p1-390 reviewed). Real-device check on GitHub Pages after merge.
+User decision: fix the two advisory WARNINGs as a follow-up commit; then push/merge and real-device check on GitHub Pages.
