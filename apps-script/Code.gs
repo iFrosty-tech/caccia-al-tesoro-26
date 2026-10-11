@@ -10,6 +10,12 @@
  *   { action: "login",        username, password }
  *   { action: "getMyAnswers", username, token }
  *   { action: "saveAnswer",   username, token, puzzleId, answer }
+ *   { action: "getPuzzleKey", username, token, puzzleId }
+ *
+ * Timed riddles (TIMED_PUZZLES) ship their media encrypted in the public repo. The AES key
+ * lives only in Script Properties (Project Settings -> Script properties, e.g. MEDIA_KEY_p2):
+ * getPuzzleKey hands it out only once this server's clock has passed unlockAt, and
+ * saveAnswer refuses a riddle that is still locked.
  *
  * There is intentionally no endpoint that lists other players' data.
  * Passwords are stored in plain text on purpose: secrecy is not a goal and the
@@ -28,6 +34,11 @@ var PASSWORD_MAX = 50;
 var ANSWER_MAX = 500;
 var PUZZLE_ID_PATTERN = /^[A-Za-z0-9_-]{1,50}$/;
 var LOCK_TIMEOUT_MS = 10000;
+
+// Riddles released at a fixed time. unlockAt is public; the key is in Script Properties.
+var TIMED_PUZZLES = {
+  p2: { unlockAt: '2026-10-11T18:30:00Z', keyProperty: 'MEDIA_KEY_p2' }
+};
 
 /** Error whose message is safe to show to the player. */
 function UserError(message, code) {
@@ -52,6 +63,9 @@ function doPost(e) {
         break;
       case 'saveAnswer':
         result = saveAnswer(req);
+        break;
+      case 'getPuzzleKey':
+        result = getPuzzleKey(req);
         break;
       default:
         throw new UserError('Azione non valida.');
@@ -123,6 +137,10 @@ function saveAnswer(req) {
   if (!PUZZLE_ID_PATTERN.test(puzzleId)) {
     throw new UserError('Enigma non valido.');
   }
+  var timed = timedPuzzleState(puzzleId, new Date());
+  if (timed && timed.locked) {
+    throw new UserError('Questo enigma non è ancora stato svelato.', 'LOCKED');
+  }
   var answer = typeof req.answer === 'string' ? req.answer.trim() : '';
   if (answer.length > ANSWER_MAX) {
     throw new UserError('Risposta troppo lunga (max ' + ANSWER_MAX + ' caratteri).');
@@ -143,6 +161,38 @@ function saveAnswer(req) {
     sheet.appendRow([safeCell(user.username), puzzleId, safeCell(answer), now]);
     return { ok: true, updatedAt: now.toISOString() };
   });
+}
+
+/** Returns the media key of a timed riddle, or locked + server time while it is still hidden. */
+function getPuzzleKey(req) {
+  authenticate(req);
+  var puzzleId = typeof req.puzzleId === 'string' ? req.puzzleId.trim() : '';
+  return puzzleKeyResponse(puzzleId, new Date(), function (name) {
+    return PropertiesService.getScriptProperties().getProperty(name);
+  });
+}
+
+/** Pure core of getPuzzleKey: clock and property reader are injected so it can be tested. */
+function puzzleKeyResponse(puzzleId, now, readProperty) {
+  var timed = timedPuzzleState(puzzleId, now);
+  if (!timed) {
+    throw new UserError('Enigma non valido.');
+  }
+  if (timed.locked) {
+    return { ok: true, locked: true, unlockAt: timed.unlockAt, serverNow: now.toISOString() };
+  }
+  var key = readProperty(TIMED_PUZZLES[puzzleId].keyProperty);
+  if (!key || !String(key).trim()) {
+    throw new UserError('Il video non è ancora pronto, riprova tra poco.', 'NOT_CONFIGURED');
+  }
+  return { ok: true, locked: false, key: String(key).trim() };
+}
+
+/** { locked, unlockAt } for a timed riddle at the given time, or null if it is not timed. */
+function timedPuzzleState(puzzleId, now) {
+  if (!Object.prototype.hasOwnProperty.call(TIMED_PUZZLES, puzzleId)) return null;
+  var unlockAt = new Date(TIMED_PUZZLES[puzzleId].unlockAt);
+  return { locked: now.getTime() < unlockAt.getTime(), unlockAt: unlockAt.toISOString() };
 }
 
 // ---------- Helpers ----------

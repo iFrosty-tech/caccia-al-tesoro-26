@@ -4,5 +4,12 @@
     "title": "Enigma 1",
     "text": "La soluzione al primo enigma è:",
     "audio": "audio/enigma-1.mp3"
+  },
+  {
+    "id": "p2",
+    "title": "Enigma 2",
+    "text": "La soluzione al secondo enigma è:",
+    "video": "video/enigma-2.enc",
+    "unlockAt": "2026-10-11T20:30:00+02:00"
   }
 ]

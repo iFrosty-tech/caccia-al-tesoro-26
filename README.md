@@ -55,6 +55,38 @@ Senza il campo `audio` l'enigma resta solo testo. I file WAV sono troppo pesanti
 ffmpeg -i in.wav -codec:a libmp3lame -b:a 160k -ar 44100 audio/enigma-N.mp3
 ```
 
+### Enigmi a tempo (video cifrato)
+
+Un enigma può comparire subito sul sito ma aprirsi solo a un'ora precisa: fino ad allora il giocatore vede un conto alla rovescia, poi il video si scarica, si decifra nel browser e parte. Il repository è pubblico, quindi il video si pubblica **solo cifrato**: la chiave sta nelle proprietà dello script Apps Script e il backend la consegna solo quando il **suo** orologio ha superato l'ora di apertura (il timer del sito è solo estetico). Prima di quell'ora il backend rifiuta anche le risposte all'enigma.
+
+1. Cifra il video (serve Node 20 o successivo, nessuna dipendenza) tenendo l'originale **fuori** dal repository:
+
+   ```sh
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/video.mp4" video/enigma-N.enc
+   ```
+
+   Lo script stampa solo la chiave (base64). Per riusare una chiave esistente aggiungi `--key <base64>`.
+2. In Apps Script apri **Impostazioni progetto → Proprietà script → Aggiungi proprietà**: nome `MEDIA_KEY_<id>` (es. `MEDIA_KEY_p2`), valore la chiave stampata.
+3. In `Code.gs` aggiungi l'enigma a `TIMED_PUZZLES`, con l'ora in UTC (20:30 in Italia d'estate = 18:30Z):
+
+   ```js
+   var TIMED_PUZZLES = {
+     p2: { unlockAt: '2026-10-11T18:30:00Z', keyProperty: 'MEDIA_KEY_p2' }
+   };
+   ```
+
+4. In [`puzzles.json`](puzzles.json) aggiungi l'enigma con `video` e la stessa ora in `unlockAt`:
+
+   ```json
+   { "id": "p2", "title": "Enigma 2", "text": "Testo dell'enigma", "video": "video/enigma-2.enc", "unlockAt": "2026-10-11T20:30:00+02:00" }
+   ```
+
+5. Ripubblica Apps Script come **nuova versione dello stesso deployment** (vedi sezione 5: **Gestisci deployment → ✏️ Modifica → Nuova versione**), così l'URL in `config.js` non cambia. Poi fai push del file `.enc` e di `puzzles.json`.
+
+> **Attenzione:** non mettere **mai** nel repository (nemmeno per un commit poi annullato: resta nella cronologia) il video in chiaro o la chiave. Se succede, cifra di nuovo con una chiave nuova e aggiorna la proprietà dello script.
+
+Il video viene scaricato per intero prima di partire: tienilo leggero (un MP4 H.264 da qualche decina di MB va bene; GitHub rifiuta file oltre 100 MB).
+
 ## 4. Vedere le risposte
 
 Apri il Google Sheet, foglio **`Answers`**: una riga per giocatore ed enigma (`username`, `puzzleId`, `answer`, `updatedAt`). Ogni modifica aggiorna la stessa riga.

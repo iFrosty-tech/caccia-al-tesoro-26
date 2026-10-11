@@ -32,6 +32,10 @@
     indexScroll: 0, // where the player left the index
     rendered: false, // the index entrance plays once per login
     freshId: "", // riddle just saved: its tile flares when the index comes back
+    viewId: 0, // bumped whenever a view is left, so its late async results are dropped
+    clockOffset: 0, // server clock minus this device's clock, learned from getPuzzleKey
+    unlockAt: {}, // unlock times confirmed by the server, by riddle id
+    unlocked: {}, // riddles whose key the server has already handed out
   };
 
   // ---------- Session storage (localStorage may be unavailable) ----------
@@ -170,6 +174,26 @@
       audio.load();
     });
     tracks.clear();
+  }
+
+  // Teardown registered by the current view: timers, downloads, blob URLs.
+  const leaveHandlers = [];
+
+  function onLeave(handler) {
+    leaveHandlers.push(handler);
+  }
+
+  // The current view is going away: silence it and drop everything it still has running.
+  function leaveView() {
+    game.viewId++;
+    stopAllAudio();
+    while (leaveHandlers.length) {
+      try {
+        leaveHandlers.pop()();
+      } catch (_) {
+        // One failing teardown must not keep the others from running.
+      }
+    }
   }
 
   function formatTime(seconds) {
@@ -365,6 +389,397 @@
     return player;
   }
 
+  // ---------- Timed riddles: countdown, then the encrypted video ----------
+
+  // The video is published encrypted (IV || ciphertext || tag); only the server hands out the
+  // key, and only after the unlock time. The countdown here is cosmetic.
+  const IV_BYTES = 12;
+  const RETRY_DELAYS = [2000, 4000, 8000, 15000, 30000]; // network/server hiccups, growing
+  const MIN_KEY_INTERVAL = 1000; // never ask for the key more than once a second
+
+  function hasVideo(puzzle) {
+    return typeof puzzle.video === "string" && puzzle.video.trim() !== "";
+  }
+
+  // This device's clock, corrected by the last server sync.
+  function serverNow() {
+    return Date.now() + game.clockOffset;
+  }
+
+  function unlockTime(puzzle) {
+    const id = String(puzzle.id);
+    if (game.unlocked[id]) return 0;
+    if (game.unlockAt[id]) return game.unlockAt[id];
+    const time = Date.parse(puzzle.unlockAt);
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  function remainingMs(puzzle) {
+    return Math.max(0, unlockTime(puzzle) - serverNow());
+  }
+
+  // Milliseconds until the corrected clock ticks over to the next whole second.
+  function untilNextSecond() {
+    return 1000 - (((serverNow() % 1000) + 1000) % 1000) + 10;
+  }
+
+  function pad(number) {
+    return (number < 10 ? "0" : "") + number;
+  }
+
+  // "08:01:22"; a day or more away, "2g 03:04:05". Rounded up, so 00:00:00 means "now".
+  function formatCountdown(ms) {
+    const total = Math.ceil(ms / 1000);
+    const days = Math.floor(total / 86400);
+    const clock =
+      pad(Math.floor(total / 3600) % 24) + ":" + pad(Math.floor(total / 60) % 60) + ":" + pad(total % 60);
+    return days > 0 ? days + "g " + clock : clock;
+  }
+
+  // "Si svela alle 20:30", or with the day when it is not today.
+  function unlockLabel(time) {
+    const date = new Date(time);
+    const hour = date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    if (new Date(serverNow()).toDateString() === date.toDateString()) return "Si svela alle " + hour;
+    const day = date.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+    return "Si svela " + day + " alle " + hour;
+  }
+
+  function formatMegabytes(bytes) {
+    return (bytes / 1048576).toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
+  // Index: locked tiles count down together; at zero a tile becomes an ordinary riddle.
+  function startTileClocks(clocks) {
+    if (clocks.length === 0) return;
+    let timer = 0;
+    function tick() {
+      let waiting = false;
+      clocks.forEach((clock) => {
+        if (!clock.tile.classList.contains("is-locked")) return;
+        const left = remainingMs(clock.puzzle);
+        if (left > 0) {
+          clock.time.textContent = formatCountdown(left);
+          waiting = true;
+          return;
+        }
+        clock.tile.classList.remove("is-locked");
+        clock.clue.replaceChildren("ancora da svelare");
+      });
+      if (waiting) timer = setTimeout(tick, untilNextSecond());
+    }
+    onLeave(() => clearTimeout(timer));
+    timer = setTimeout(tick, untilNextSecond());
+  }
+
+  // Streams the file, reporting (received, total); total is 0 when the size is unknown.
+  async function download(url, signal, onProgress) {
+    const res = await fetch(url, { signal: signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    // A compressed response reports its compressed size: progress is then indeterminate.
+    const total = res.headers.get("Content-Encoding") ? 0 : Number(res.headers.get("Content-Length")) || 0;
+    if (!res.body || typeof res.body.getReader !== "function") {
+      const whole = new Uint8Array(await res.arrayBuffer());
+      onProgress(whole.length, whole.length);
+      return whole;
+    }
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    for (;;) {
+      const step = await reader.read();
+      if (step.done) break;
+      chunks.push(step.value);
+      received += step.value.length;
+      onProgress(received, total);
+    }
+    const bytes = new Uint8Array(received);
+    let offset = 0;
+    chunks.forEach((chunk) => {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    });
+    return bytes;
+  }
+
+  // AES-256-GCM with the 12-byte IV in front; WebCrypto checks the trailing tag.
+  async function decryptMedia(bytes, keyBase64) {
+    const raw = Uint8Array.from(atob(keyBase64), (char) => char.charCodeAt(0));
+    const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.subarray(0, IV_BYTES) }, key, bytes.subarray(IV_BYTES));
+  }
+
+  // Countdown until the server says the time has come, then download, decrypt and play.
+  // `onReveal` shows the riddle text and the answer form once the video is ready.
+  function renderTimedStage(puzzle, onReveal) {
+    const viewId = game.viewId;
+    const session = game.session;
+    const id = String(puzzle.id);
+    const title = String(puzzle.title || "");
+    const alive = () => viewId === game.viewId;
+
+    const stage = document.createElement("div");
+    stage.className = "reveal";
+
+    const lock = document.createElement("div");
+    lock.className = "reveal-lock";
+    const clock = document.createElement("p");
+    clock.className = "countdown";
+    clock.setAttribute("role", "timer");
+    const when = document.createElement("p");
+    when.className = "countdown-when";
+    lock.append(clock, when);
+
+    const loader = document.createElement("div");
+    loader.className = "reveal-loader";
+    loader.hidden = true;
+    const loaderTitle = document.createElement("p");
+    loaderTitle.className = "reveal-loader-title";
+    const bar = document.createElement("div");
+    bar.className = "reveal-bar";
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-label", "Download del video");
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    const amount = document.createElement("p");
+    amount.className = "reveal-amount";
+    loader.append(loaderTitle, bar, amount);
+
+    const message = document.createElement("p");
+    message.className = "reveal-message";
+    message.setAttribute("role", "status");
+
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "btn-secondary reveal-retry";
+    retry.textContent = "Riprova";
+    retry.hidden = true;
+
+    stage.append(lock, loader, message, retry);
+
+    let timer = 0;
+    let attempt = 0;
+    let requesting = false;
+    let lastRequest = 0;
+    let retryAction = null;
+    let video = null;
+    let objectUrl = "";
+    const abort = new AbortController();
+
+    onLeave(() => {
+      clearTimeout(timer);
+      abort.abort();
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = "";
+    });
+
+    function schedule(fn, delay) {
+      clearTimeout(timer);
+      timer = setTimeout(fn, delay);
+    }
+
+    function say(text, isError) {
+      message.textContent = text;
+      message.classList.toggle("is-error", Boolean(isError));
+    }
+
+    function showProblem(text, action) {
+      say(text, true);
+      retryAction = action;
+      retry.hidden = !action;
+    }
+
+    retry.addEventListener("click", () => {
+      const action = retryAction;
+      showProblem("", null);
+      say("Un attimo…", false);
+      if (action) action();
+    });
+
+    function showCountdown() {
+      lock.hidden = false;
+      loader.hidden = true;
+      tick();
+    }
+
+    function tick() {
+      const left = remainingMs(puzzle);
+      clock.textContent = formatCountdown(left);
+      clock.classList.toggle("is-long", left >= 86400000);
+      if (left > 0) {
+        when.textContent = unlockLabel(unlockTime(puzzle));
+        schedule(tick, untilNextSecond());
+        return;
+      }
+      if (!hasVideo(puzzle)) {
+        // Nothing encrypted to fetch: the riddle simply opens.
+        lock.hidden = true;
+        onReveal();
+        return;
+      }
+      when.textContent = "Ci siamo…";
+      // A request is already out, or one just came back still locked: look again shortly.
+      if (requesting || Date.now() - lastRequest < MIN_KEY_INTERVAL) {
+        schedule(tick, MIN_KEY_INTERVAL);
+        return;
+      }
+      requestKey();
+    }
+
+    async function requestKey() {
+      if (requesting) return;
+      requesting = true;
+      lastRequest = Date.now();
+      const sentAt = lastRequest;
+      let data;
+      try {
+        data = await api("getPuzzleKey", { username: session.username, token: session.token, puzzleId: id });
+      } catch (err) {
+        if (alive()) onKeyError(err);
+        return;
+      } finally {
+        requesting = false;
+      }
+      if (!alive()) return;
+      attempt = 0;
+      if (data.locked) {
+        // The server's clock wins; measure it at the middle of the round trip.
+        const serverTime = Date.parse(data.serverNow);
+        if (Number.isFinite(serverTime)) game.clockOffset = serverTime - (sentAt + Date.now()) / 2;
+        const unlockAt = Date.parse(data.unlockAt);
+        if (Number.isFinite(unlockAt)) game.unlockAt[id] = unlockAt;
+        say("", false);
+        showCountdown();
+        return;
+      }
+      game.unlocked[id] = true;
+      loadVideo(String(data.key || ""));
+    }
+
+    function onKeyError(err) {
+      if (err instanceof ApiError && err.code === "AUTH") {
+        logout();
+        els.registerError.textContent = err.message;
+        return;
+      }
+      // Only the opening sync failed: the countdown keeps going on this device's clock.
+      if (!lock.hidden && remainingMs(puzzle) > 0) return;
+      if (err.code === "NOT_CONFIGURED") {
+        showProblem("Il video non è ancora pronto, riprova tra poco.", requestKey);
+        return;
+      }
+      if (err.code === "BAD_REQUEST") {
+        showProblem(err.message, requestKey);
+        return;
+      }
+      // Network, busy or server hiccup: try again on its own, waiting a little longer each time.
+      const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)];
+      attempt++;
+      say(err.message + " Nuovo tentativo tra " + Math.round(delay / 1000) + " s…", true);
+      schedule(requestKey, delay);
+    }
+
+    function showProgress(received, total) {
+      if (total > 0) {
+        const percent = Math.min(100, Math.round((received / total) * 100));
+        bar.classList.remove("is-indeterminate");
+        bar.style.setProperty("--progress", String(Math.min(1, received / total)));
+        bar.setAttribute("aria-valuenow", String(percent));
+        amount.textContent = percent + "% · " + formatMegabytes(received) + " di " + formatMegabytes(total) + " MB";
+      } else {
+        bar.classList.add("is-indeterminate");
+        bar.removeAttribute("aria-valuenow");
+        amount.textContent = formatMegabytes(received) + " MB";
+      }
+    }
+
+    async function loadVideo(keyBase64) {
+      clearTimeout(timer);
+      lock.hidden = true;
+      showProblem("", null);
+      if (!window.crypto || !crypto.subtle || typeof URL.createObjectURL !== "function") {
+        showProblem("Questo browser non riesce ad aprire il video: prova con un browser aggiornato.", null);
+        return;
+      }
+      loader.hidden = false;
+      loaderTitle.textContent = "Il video sta affiorando…";
+      showProgress(0, 0);
+
+      let bytes;
+      try {
+        bytes = await download(puzzle.video.trim(), abort.signal, showProgress);
+      } catch (_) {
+        if (!alive()) return;
+        loader.hidden = true;
+        showProblem("Download del video non riuscito. Controlla la rete e riprova.", () => loadVideo(keyBase64));
+        return;
+      }
+      if (!alive()) return;
+
+      loaderTitle.textContent = "Decifratura in corso…";
+      let plain;
+      try {
+        plain = await decryptMedia(bytes, keyBase64);
+      } catch (_) {
+        if (!alive()) return;
+        loader.hidden = true;
+        showProblem("Impossibile aprire il video: la chiave non corrisponde. Avvisa l'organizzatore.", requestKey);
+        return;
+      }
+      if (!alive()) return;
+      bytes = null;
+
+      objectUrl = URL.createObjectURL(new Blob([plain], { type: "video/mp4" }));
+      plain = null;
+      loader.hidden = true;
+      mountVideo();
+      onReveal();
+    }
+
+    function mountVideo() {
+      const frame = document.createElement("div");
+      frame.className = "video-frame";
+      video = document.createElement("video");
+      video.className = "riddle-video";
+      video.controls = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.preload = "metadata";
+      video.setAttribute("aria-label", title ? "Video di " + title : "Video dell'enigma");
+      video.addEventListener("error", () => {
+        // Ignore the error caused by leaving the page and dropping the source.
+        if (!video.getAttribute("src")) return;
+        showProblem("Questo browser non riesce a riprodurre il video.", null);
+      });
+      video.src = objectUrl;
+      frame.append(video);
+      stage.insertBefore(frame, message);
+      say("", false);
+      // The riddle surfaces: the frame lights up and the sea blooms around it.
+      requestAnimationFrame(() => {
+        if (!alive()) return;
+        stage.classList.add("is-revealed");
+        bloomAt(frame);
+      });
+    }
+
+    if (remainingMs(puzzle) > 0) {
+      showCountdown();
+      // Sync with the server clock (or open straight away if this device is running late).
+      if (hasVideo(puzzle)) requestKey();
+    } else {
+      lock.hidden = true;
+      say("Apertura del video…", false);
+      requestKey();
+    }
+    return stage;
+  }
+
   // ---------- Router ----------
 
   // "#/" (or no hash) is the index of clues, "#/enigma/<id>" a riddle page.
@@ -402,7 +817,7 @@
 
   function renderRoute() {
     if (els.puzzlesView.querySelector(".index-view")) game.indexScroll = window.scrollY;
-    stopAllAudio();
+    leaveView();
     forgetIgnites();
     els.puzzlesView.replaceChildren();
     if (game.puzzles.length === 0) {
@@ -459,7 +874,7 @@
   }
 
   function showRegister() {
-    stopAllAudio();
+    leaveView();
     document.body.classList.remove("is-playing");
     els.userBar.hidden = true;
     els.puzzlesSection.hidden = true;
@@ -470,7 +885,7 @@
   }
 
   async function showPuzzles(session) {
-    stopAllAudio();
+    leaveView();
     const loadId = ++game.loadId;
     Object.assign(game, {
       session: session,
@@ -479,6 +894,9 @@
       indexScroll: 0,
       rendered: false,
       freshId: "",
+      clockOffset: 0,
+      unlockAt: {},
+      unlocked: {},
     });
     els.registerSection.hidden = true;
     document.body.classList.add("is-playing");
@@ -561,9 +979,10 @@
 
     const list = document.createElement("ol");
     list.className = "tiles";
+    const clocks = [];
     const tiles = puzzles.map((puzzle) => {
       const item = document.createElement("li");
-      const tile = renderTile(puzzle);
+      const tile = renderTile(puzzle, clocks);
       item.append(tile);
       list.append(item);
       return tile;
@@ -571,6 +990,7 @@
 
     view.append(progress, list);
     els.puzzlesView.append(view);
+    startTileClocks(clocks);
 
     // The tiles ignite on the first visit; afterwards the index simply comes back lit.
     tiles.forEach((tile, index) => {
@@ -587,10 +1007,12 @@
     focusHeading(heading);
   }
 
-  function renderTile(puzzle) {
+  // A riddle still waiting for its time gets a live countdown, registered in `clocks`.
+  function renderTile(puzzle, clocks) {
     const answer = savedAnswer(puzzle.id);
+    const locked = !answer && remainingMs(puzzle) > 0;
     const tile = document.createElement("a");
-    tile.className = "tile" + (answer ? " is-solved" : "");
+    tile.className = "tile" + (answer ? " is-solved" : "") + (locked ? " is-locked" : "");
     tile.href = riddleHref(puzzle.id);
     tile.dataset.id = String(puzzle.id);
 
@@ -609,6 +1031,12 @@
     clue.className = "tile-clue";
     if (answer) {
       clue.append(visuallyHidden("Indizio raccolto: "), answer);
+    } else if (locked) {
+      const time = document.createElement("span");
+      time.className = "tile-countdown";
+      time.textContent = formatCountdown(remainingMs(puzzle));
+      clue.append(visuallyHidden("Enigma chiuso, "), "si svela tra ", time);
+      clocks.push({ puzzle: puzzle, tile: tile, clue: clue, time: time });
     } else {
       clue.textContent = "ancora da svelare";
     }
@@ -725,6 +1153,17 @@
     // Optional track, between the riddle and the answer.
     if (typeof puzzle.audio === "string" && puzzle.audio.trim() !== "") {
       card.append(renderAudioPlayer(puzzle.audio.trim(), String(puzzle.title || "")));
+    }
+    // Timed or video riddle: only the countdown (then the video) shows until it is revealed.
+    if (hasVideo(puzzle) || remainingMs(puzzle) > 0) {
+      text.hidden = true;
+      form.hidden = true;
+      card.append(
+        renderTimedStage(puzzle, () => {
+          text.hidden = false;
+          form.hidden = false;
+        })
+      );
     }
     card.append(form);
     view.append(back, card);
