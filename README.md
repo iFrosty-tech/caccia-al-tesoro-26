@@ -36,6 +36,8 @@ Modifica [`puzzles.json`](puzzles.json) e fai push su `main`:
 - `id` deve essere unico e non va cambiato dopo la pubblicazione (le risposte sono legate all'id). Usa solo lettere, numeri, `-` e `_`.
 - Nel `text` puoi andare a capo con `\n`.
 
+Dopo l'accesso il giocatore vede la raccolta degli indizi (quanti enigmi ha risolto e le risposte salvate); ogni enigma ha una sua pagina all'indirizzo `…/#/enigma/<id>` (es. `#/enigma/p1`), che puoi anche condividere direttamente: chi non ha ancora fatto l'accesso ci arriva subito dopo il login.
+
 ### Audio (facoltativo)
 
 Un enigma può avere una traccia audio, che compare con un player tra il testo e la risposta:

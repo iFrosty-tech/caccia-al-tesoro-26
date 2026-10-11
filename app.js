@@ -20,7 +20,18 @@
     registerError: $("register-error"),
     puzzlesSection: $("puzzles-section"),
     puzzlesStatus: $("puzzles-status"),
-    puzzlesList: $("puzzles-list"),
+    puzzlesView: $("puzzles-view"),
+  };
+
+  // Game state for the current login: riddles and saved answers are fetched once, then kept here.
+  const game = {
+    session: null,
+    puzzles: null, // null while loading
+    answers: {},
+    loadId: 0, // bumped on every login/logout so a stale load cannot render
+    indexScroll: 0, // where the player left the index
+    rendered: false, // the index entrance plays once per login
+    freshId: "", // riddle just saved: its tile flares when the index comes back
   };
 
   // ---------- Session storage (localStorage may be unavailable) ----------
@@ -100,7 +111,7 @@
 
   // ---------- Light effects (visual only) ----------
 
-  // Riddle cards stay dark until they scroll into view, then ignite.
+  // Riddle cards and index tiles stay dark until they scroll into view, then ignite.
   const igniter =
     "IntersectionObserver" in window
       ? new IntersectionObserver(
@@ -119,6 +130,11 @@
     card.style.setProperty("--i", String(Math.min(index, 4)));
     if (igniter) igniter.observe(card);
     else card.classList.add("lit");
+  }
+
+  // A view is being replaced: stop watching its cards.
+  function forgetIgnites() {
+    if (igniter) igniter.disconnect();
   }
 
   // The sea blooms around an element (plankton.js skips it under reduced motion).
@@ -349,26 +365,127 @@
     return player;
   }
 
+  // ---------- Router ----------
+
+  // "#/" (or no hash) is the index of clues, "#/enigma/<id>" a riddle page.
+  const RIDDLE_ROUTE = /^#\/enigma\/(.+)$/;
+
+  function riddleHref(id) {
+    return "#/enigma/" + encodeURIComponent(id);
+  }
+
+  // Id of the riddle named by the current hash, or "" for the index.
+  function routeRiddleId() {
+    const match = RIDDLE_ROUTE.exec(location.hash);
+    if (!match) return "";
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (_) {
+      return match[1];
+    }
+  }
+
+  // Rewrites the hash without a history entry (replaceState never fires hashchange).
+  function replaceRoute(hash) {
+    try {
+      history.replaceState(null, "", hash || location.pathname + location.search);
+    } catch (_) {
+      // Sandboxed or file:// pages: a stale hash only affects the next login.
+    }
+  }
+
+  function onRouteChange() {
+    // Logged out or still loading: the route is applied once the riddles arrive.
+    if (!game.session || !game.puzzles) return;
+    renderRoute();
+  }
+
+  function renderRoute() {
+    if (els.puzzlesView.querySelector(".index-view")) game.indexScroll = window.scrollY;
+    stopAllAudio();
+    forgetIgnites();
+    els.puzzlesView.replaceChildren();
+    if (game.puzzles.length === 0) {
+      els.puzzlesStatus.textContent = "Nessun enigma pubblicato per ora. Torna più tardi!";
+      return;
+    }
+    els.puzzlesStatus.textContent = "";
+
+    const id = routeRiddleId();
+    if (!id) {
+      renderIndex("");
+      return;
+    }
+    const puzzle = game.puzzles.find((candidate) => String(candidate.id) === id);
+    if (puzzle) {
+      renderRiddle(puzzle);
+      return;
+    }
+    replaceRoute("#/");
+    renderIndex("Questo enigma non esiste: ecco i tuoi indizi.");
+  }
+
   // ---------- Views ----------
+
+  function savedAnswer(id) {
+    const value = game.answers[id];
+    return value == null ? "" : String(value).trim();
+  }
+
+  function visuallyHidden(text) {
+    const span = document.createElement("span");
+    span.className = "visually-hidden";
+    span.textContent = text;
+    return span;
+  }
+
+  // Thin stroked chevron; the back link mirrors it in CSS.
+  function chevron(className) {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "chevron " + className);
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", "M9.5 5.5 16 12l-6.5 6.5");
+    svg.appendChild(path);
+    return svg;
+  }
+
+  // New view: keyboard and screen reader focus land on its heading.
+  function focusHeading(heading) {
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }
 
   function showRegister() {
     stopAllAudio();
     document.body.classList.remove("is-playing");
     els.userBar.hidden = true;
     els.puzzlesSection.hidden = true;
-    els.puzzlesList.replaceChildren();
+    forgetIgnites();
+    els.puzzlesView.replaceChildren();
     els.registerSection.hidden = false;
     els.usernameInput.focus();
   }
 
   async function showPuzzles(session) {
     stopAllAudio();
+    const loadId = ++game.loadId;
+    Object.assign(game, {
+      session: session,
+      puzzles: null,
+      answers: {},
+      indexScroll: 0,
+      rendered: false,
+      freshId: "",
+    });
     els.registerSection.hidden = true;
     document.body.classList.add("is-playing");
     els.userName.textContent = session.username;
     els.userBar.hidden = false;
     els.puzzlesSection.hidden = false;
-    els.puzzlesList.replaceChildren();
+    els.puzzlesView.replaceChildren();
     els.puzzlesStatus.textContent = "Caricamento enigmi…";
 
     let puzzles, answers;
@@ -380,6 +497,7 @@
       puzzles = results[0];
       answers = results[1].answers || {};
     } catch (err) {
+      if (loadId !== game.loadId) return;
       if (err instanceof ApiError && err.code === "AUTH") {
         logout();
         els.registerError.textContent = err.message;
@@ -389,24 +507,136 @@
         err instanceof ApiError ? err.message : "Impossibile caricare gli enigmi.";
       return;
     }
+    if (loadId !== game.loadId) return;
 
-    if (puzzles.length === 0) {
-      els.puzzlesStatus.textContent = "Nessun enigma pubblicato per ora. Torna più tardi!";
-      return;
-    }
-    els.puzzlesStatus.textContent = "";
-    puzzles.forEach((puzzle, index) => {
-      const card = renderPuzzle(puzzle, answers[puzzle.id] || "", session);
-      els.puzzlesList.appendChild(card);
-      ignite(card, index);
-    });
+    game.answers = answers;
+    game.puzzles = puzzles.filter((puzzle) => puzzle && puzzle.id != null);
+    renderRoute();
   }
 
-  function renderPuzzle(puzzle, savedAnswer, session) {
+  // Index: how many clues are collected, then one tile per riddle.
+  function renderIndex(notice) {
+    const puzzles = game.puzzles;
+    const view = document.createElement("div");
+    view.className = "view index-view";
+
+    if (notice) {
+      const note = document.createElement("p");
+      note.className = "route-notice";
+      note.setAttribute("role", "status");
+      note.textContent = notice;
+      view.append(note);
+    }
+
+    const solved = puzzles.filter((puzzle) => savedAnswer(puzzle.id) !== "").length;
+    const progress = document.createElement("header");
+    progress.className = "progress";
+
+    const heading = document.createElement("h2");
+    heading.className = "progress-title";
+    heading.textContent = "Indizi raccolti";
+
+    const count = document.createElement("p");
+    count.className = "progress-count";
+    const shown = document.createElement("span");
+    shown.setAttribute("aria-hidden", "true");
+    const found = document.createElement("span");
+    found.className = "progress-found";
+    found.textContent = String(solved);
+    shown.append(found, " / " + puzzles.length);
+    count.append(visuallyHidden(solved + " su " + puzzles.length), shown);
+
+    // One segment per riddle, in order: the collected ones glow.
+    const line = document.createElement("div");
+    line.className = "progress-line";
+    line.setAttribute("aria-hidden", "true");
+    puzzles.forEach((puzzle) => {
+      const segment = document.createElement("span");
+      if (savedAnswer(puzzle.id) !== "") segment.className = "is-lit";
+      if (String(puzzle.id) === game.freshId) segment.classList.add("is-fresh");
+      line.append(segment);
+    });
+
+    progress.append(heading, count, line);
+
+    const list = document.createElement("ol");
+    list.className = "tiles";
+    const tiles = puzzles.map((puzzle) => {
+      const item = document.createElement("li");
+      const tile = renderTile(puzzle);
+      item.append(tile);
+      list.append(item);
+      return tile;
+    });
+
+    view.append(progress, list);
+    els.puzzlesView.append(view);
+
+    // The tiles ignite on the first visit; afterwards the index simply comes back lit.
+    tiles.forEach((tile, index) => {
+      if (!game.rendered) {
+        tile.classList.add("ignite");
+        ignite(tile, index);
+      }
+      if (tile.dataset.id === game.freshId) tile.classList.add("saved");
+    });
+    game.rendered = true;
+    game.freshId = "";
+
+    window.scrollTo(0, notice ? 0 : game.indexScroll);
+    focusHeading(heading);
+  }
+
+  function renderTile(puzzle) {
+    const answer = savedAnswer(puzzle.id);
+    const tile = document.createElement("a");
+    tile.className = "tile" + (answer ? " is-solved" : "");
+    tile.href = riddleHref(puzzle.id);
+    tile.dataset.id = String(puzzle.id);
+
+    const light = document.createElement("span");
+    light.className = "tile-light";
+    light.setAttribute("aria-hidden", "true");
+
+    const body = document.createElement("span");
+    body.className = "tile-body";
+
+    const title = document.createElement("h3");
+    title.className = "tile-title";
+    title.textContent = String(puzzle.title || "");
+
+    const clue = document.createElement("span");
+    clue.className = "tile-clue";
+    if (answer) {
+      clue.append(visuallyHidden("Indizio raccolto: "), answer);
+    } else {
+      clue.textContent = "ancora da svelare";
+    }
+
+    body.append(title, clue);
+    tile.append(light, body, chevron("tile-arrow"));
+    return tile;
+  }
+
+  // Riddle page: text, optional audio and the answer form, pre-filled with the saved answer.
+  function renderRiddle(puzzle) {
+    const session = game.session;
+    const loadId = game.loadId;
+    game.freshId = "";
+
+    const view = document.createElement("div");
+    view.className = "view riddle-view";
+
+    const back = document.createElement("a");
+    back.className = "back-link";
+    back.href = "#/";
+    back.append(chevron("back-arrow"), "Indizi");
+
     const card = document.createElement("article");
     card.className = "card puzzle";
 
     const title = document.createElement("h2");
+    title.className = "riddle-title";
     title.textContent = String(puzzle.title || "");
 
     const text = document.createElement("p");
@@ -414,20 +644,24 @@
     text.textContent = String(puzzle.text || "");
 
     const form = document.createElement("form");
-    form.className = "row";
+    form.className = "answer-form";
 
     const inputId = "answer-" + puzzle.id;
     const label = document.createElement("label");
-    label.className = "visually-hidden";
+    label.className = "answer-label";
     label.htmlFor = inputId;
-    label.textContent = "Risposta";
+    label.textContent = "La tua risposta";
+
+    const row = document.createElement("div");
+    row.className = "row";
 
     const input = document.createElement("input");
     input.id = inputId;
     input.type = "text";
     input.maxLength = ANSWER_MAX;
-    input.placeholder = "La tua risposta";
-    input.value = savedAnswer;
+    input.autocomplete = "off";
+    input.placeholder = "Scrivi qui la soluzione";
+    input.value = savedAnswer(puzzle.id);
 
     const button = document.createElement("button");
     button.type = "submit";
@@ -454,10 +688,18 @@
           puzzleId: puzzle.id,
           answer: input.value,
         });
+        // Logged out while saving: this page and its state are gone.
+        if (loadId !== game.loadId) return;
+        // Same trim as the server, so the index shows exactly what was stored.
+        const answer = input.value.trim();
+        input.value = answer;
+        game.answers[puzzle.id] = answer;
+        game.freshId = answer ? String(puzzle.id) : "";
         status.textContent = "Salvato ✓";
         status.className = "save-status ok";
         celebrate(card, button);
       } catch (err) {
+        if (loadId !== game.loadId) return;
         if (err instanceof ApiError && err.code === "AUTH") {
           logout();
           els.registerError.textContent = err.message;
@@ -470,14 +712,20 @@
       }
     });
 
-    form.append(label, input, button);
+    row.append(input, button);
+    form.append(label, row, status);
     card.append(title, text);
     // Optional track, between the riddle and the answer.
     if (typeof puzzle.audio === "string" && puzzle.audio.trim() !== "") {
       card.append(renderAudioPlayer(puzzle.audio.trim(), String(puzzle.title || "")));
     }
-    card.append(form, status);
-    return card;
+    card.append(form);
+    view.append(back, card);
+    els.puzzlesView.append(view);
+    ignite(card, 0);
+
+    window.scrollTo(0, 0);
+    focusHeading(title);
   }
 
   // ---------- Actions ----------
@@ -518,7 +766,12 @@
     }
   }
 
+  // Keeps the hash, so a deep link survives an expired session and opens after the next login.
   function logout() {
+    game.loadId++;
+    game.session = null;
+    game.puzzles = null;
+    game.answers = {};
     clearSession();
     els.registerError.textContent = "";
     showRegister();
@@ -535,8 +788,12 @@
     els.logoutBtn.addEventListener("click", () => {
       // Ask first so a misclick does not log the player out.
       const confirmed = window.confirm("Vuoi uscire? Potrai rientrare con username e password.");
-      if (confirmed) logout();
+      if (!confirmed) return;
+      // A deliberate exit forgets the current riddle: the next login opens the index.
+      replaceRoute("");
+      logout();
     });
+    window.addEventListener("hashchange", onRouteChange);
 
     const session = loadSession();
     if (session) {

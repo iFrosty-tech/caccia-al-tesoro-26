@@ -42,7 +42,7 @@
       </svg>
     </h1>
     <div id="user-bar" class="user-bar" hidden>
-      <span>Ciao, <strong id="user-name"></strong></span>
+      <span class="user-greeting"><span class="user-hello">Ciao, </span><strong id="user-name"></strong></span>
       <button id="logout-btn" type="button" class="btn-secondary">Esci</button>
     </div>
   </header>
@@ -73,7 +73,8 @@
 
     <section id="puzzles-section" hidden>
       <p id="puzzles-status" class="muted puzzles-status" role="status"></p>
-      <div id="puzzles-list" class="puzzles-list"></div>
+      <!-- Filled by the hash router in app.js: index (#/) or riddle page (#/enigma/<id>). -->
+      <div id="puzzles-view"></div>
     </section>
   </main>
 
