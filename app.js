@@ -1091,14 +1091,19 @@
     }
 
     function mountVideo() {
-      // "#t=0.001" makes iOS paint the first frame instead of a black box.
-      const player = renderVideoPlayer(objectUrl + "#t=0.001", title);
+      // No "#t=" fragment on the blob URL: older iOS WebKit fails to resolve it and refuses the
+      // source. A tiny seek after the metadata paints the first frame instead of a black box.
+      const player = renderVideoPlayer(objectUrl, title);
       const frame = player.querySelector(".video-frame");
       video = player.querySelector("video");
+      video.addEventListener("loadedmetadata", () => {
+        if (video.paused && video.currentTime === 0) video.currentTime = 0.001;
+      }, { once: true });
       video.addEventListener("error", () => {
         // Ignore the error caused by leaving the page and dropping the source.
         if (!video.getAttribute("src")) return;
-        showProblem("Questo browser non riesce a riprodurre il video.", null);
+        const code = video.error ? " (codice " + video.error.code + ")" : "";
+        showProblem("Questo browser non riesce a riprodurre il video" + code + ".", null);
       });
       stage.insertBefore(mediaLabel("Guarda l'enigma"), message);
       stage.insertBefore(player, message);
