@@ -41,6 +41,7 @@ single-pr (~350 authored lines forecast)
   - Portrait 720x1280 clip capped at <=70svh.
   - Audio regression: computed-style dump of p1 player idle state 0 diffs; screenshots match.
   - Parent visual check of 390 ready/playing/ended/fullscreen, 320 ready, audio p1.
+- T1 commit e1b1f37. Review: assess medium (slice_budget_reached, 930 lines) → consent granted → native review (1 lens, reliability) approved and acknowledged (lineage review-c13b8ca1fb4554f5, authority burned). Advisory, non-blocking: R3-reduced-motion-video-ripple (refuted: global reduced-motion rule in style.css forces every animation to one 0.01ms run, incl. ::before), R3-reveal-scope-controls (refuted: the player is mounted inside the `.reveal` stage, app.js renderTimedStage), R3-no-committed-regression-harness (accepted as follow-up; project has no test runner).
 - Not verified: real iPhone `webkitEnterFullscreen`, Android orientation lock, real network buffering, the real 247 s file on device.
 
 ## Next step
