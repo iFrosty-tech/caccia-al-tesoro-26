@@ -156,7 +156,7 @@
     bloomAt(button);
   }
 
-  // ---------- Audio player ----------
+  // ---------- Riddle media: audio and video players ----------
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const SEEK_STEP = 5; // seconds per arrow key press
@@ -203,10 +203,35 @@
     return Math.floor(whole / 60) + ":" + (rest < 10 ? "0" : "") + rest;
   }
 
-  // Filled 24x24 icon drawn from one path per shape.
+  // Filled 24x24 icons, one path per shape.
+  const ICONS = {
+    play: ["M8 5.8v12.4a1 1 0 0 0 1.53.85l9.9-6.2a1 1 0 0 0 0-1.7l-9.9-6.2A1 1 0 0 0 8 5.8z"],
+    pause: [
+      "M7 5.5A1.5 1.5 0 0 1 8.5 4h1A1.5 1.5 0 0 1 11 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 7 18.5z",
+      "M13 5.5A1.5 1.5 0 0 1 14.5 4h1A1.5 1.5 0 0 1 17 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 13 18.5z",
+    ],
+    // A ring turning back on itself, its head pointing the way it came.
+    replay: [
+      "M12 5.25A7.75 7.75 0 1 1 5.29 9.13a1 1 0 0 1 1.73 1A5.75 5.75 0 1 0 12 7.25z",
+      "M8.1 5.64l4.15-2.9a.75.75 0 0 1 1.18.61v5.8a.75.75 0 0 1-1.18.61L8.1 6.86a.75.75 0 0 1 0-1.22z",
+    ],
+    enterFullscreen: [
+      "M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9a1 1 0 0 1 0 2H6v3a1 1 0 0 1-2 0z",
+      "M20 9V5.5A1.5 1.5 0 0 0 18.5 4H15a1 1 0 0 0 0 2h3v3a1 1 0 0 0 2 0z",
+      "M4 15v3.5A1.5 1.5 0 0 0 5.5 20H9a1 1 0 0 0 0-2H6v-3a1 1 0 0 0-2 0z",
+      "M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15a1 1 0 0 1 0-2h3v-3a1 1 0 0 1 2 0z",
+    ],
+    exitFullscreen: [
+      "M9 4v3.5A1.5 1.5 0 0 1 7.5 9H4a1 1 0 0 1 0-2h3V4a1 1 0 0 1 2 0z",
+      "M15 4v3.5a1.5 1.5 0 0 0 1.5 1.5H20a1 1 0 0 0 0-2h-3V4a1 1 0 0 0-2 0z",
+      "M9 20v-3.5A1.5 1.5 0 0 0 7.5 15H4a1 1 0 0 0 0 2h3v3a1 1 0 0 0 2 0z",
+      "M15 20v-3.5a1.5 1.5 0 0 1 1.5-1.5H20a1 1 0 0 1 0 2h-3v3a1 1 0 0 1-2 0z",
+    ],
+  };
+
   function icon(className, shapes) {
     const svg = document.createElementNS(SVG_NS, "svg");
-    svg.setAttribute("class", "audio-icon " + className);
+    svg.setAttribute("class", "media-icon " + className);
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("aria-hidden", "true");
     svg.setAttribute("focusable", "false");
@@ -218,75 +243,51 @@
     return svg;
   }
 
-  // Custom controls over a hidden <audio>: play/pause, seek bar, elapsed/total time.
-  function renderAudioPlayer(src, title) {
-    const player = document.createElement("div");
-    player.className = "audio-player";
-    player.setAttribute("role", "group");
-    player.setAttribute("aria-label", title ? "Audio di " + title : "Audio dell'enigma");
-
-    // preload="metadata": only the duration is fetched until the player presses play.
-    const audio = document.createElement("audio");
-    audio.preload = "metadata";
-    audio.hidden = true;
-    audio.src = src;
-    tracks.add(audio);
-
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "audio-toggle";
-    toggle.setAttribute("aria-label", "Riproduci audio");
-    toggle.append(
-      icon("audio-icon-play", ["M8 5.8v12.4a1 1 0 0 0 1.53.85l9.9-6.2a1 1 0 0 0 0-1.7l-9.9-6.2A1 1 0 0 0 8 5.8z"]),
-      icon("audio-icon-pause", [
-        "M7 5.5A1.5 1.5 0 0 1 8.5 4h1A1.5 1.5 0 0 1 11 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 7 18.5z",
-        "M13 5.5A1.5 1.5 0 0 1 14.5 4h1A1.5 1.5 0 0 1 17 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 13 18.5z",
-      ])
-    );
-
-    // The orb carries the light around the button: halo, ripples, searching arc.
+  // The orb: a round button of wake light inside a span that carries its halo, ripples and arc.
+  function orbButton(orbClass, buttonClass, icons) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "orb-button " + buttonClass;
+    icons.forEach((name) => button.append(icon("icon-" + name, ICONS[name])));
     const orb = document.createElement("span");
-    orb.className = "audio-orb";
-    orb.append(toggle);
+    orb.className = "orb " + orbClass;
+    orb.append(button);
+    return { orb: orb, button: button };
+  }
 
-    const track = document.createElement("div");
-    track.className = "audio-track";
-
-    // The bar holds the seek range and the glint that travels along its played part.
+  // The wake shared by both players: seek range, a glint running along its played part,
+  // elapsed/total times. `kind` prefixes the classes so each player can address its own.
+  function createWake(media, kind, label) {
     const bar = document.createElement("div");
-    bar.className = "audio-bar";
+    bar.className = kind + "-bar wake-bar";
     const glint = document.createElement("span");
-    glint.className = "audio-glint";
+    glint.className = kind + "-glint wake-glint";
     glint.setAttribute("aria-hidden", "true");
 
     // Disabled until the duration is known: there is nothing to seek before that.
     const seek = document.createElement("input");
     seek.type = "range";
-    seek.className = "audio-seek";
+    seek.className = kind + "-seek wake-seek";
     seek.min = "0";
     seek.max = "0";
     seek.step = "1";
     seek.value = "0";
     seek.disabled = true;
-    seek.setAttribute("aria-label", "Posizione audio");
+    seek.setAttribute("aria-label", label);
 
     const time = document.createElement("p");
-    time.className = "audio-time";
+    time.className = kind + "-time media-time";
     const elapsed = document.createElement("span");
     elapsed.textContent = "0:00";
     const total = document.createElement("span");
     total.textContent = NO_TIME;
     time.append(elapsed, total);
 
-    const message = document.createElement("p");
-    message.className = "audio-message";
-    message.setAttribute("role", "status");
-
     // While the thumb is dragged the bar follows the finger, not the playback.
     let scrubbing = false;
 
     function showPosition(seconds) {
-      const duration = audio.duration;
+      const duration = media.duration;
       const ratio = Number.isFinite(duration) && duration > 0 ? seconds / duration : 0;
       seek.value = String(seconds);
       bar.style.setProperty("--progress", Math.min(100, ratio * 100) + "%");
@@ -294,27 +295,11 @@
       seek.setAttribute("aria-valuetext", formatTime(seconds) + " di " + formatTime(duration));
     }
 
-    function setLoading(loading) {
-      player.classList.toggle("is-loading", loading);
-      toggle.setAttribute("aria-busy", String(loading));
-    }
-
     function seekTo(seconds) {
-      const clamped = Math.max(0, Math.min(seconds, audio.duration || 0));
-      audio.currentTime = clamped;
+      const clamped = Math.max(0, Math.min(seconds, media.duration || 0));
+      media.currentTime = clamped;
       showPosition(clamped);
     }
-
-    toggle.addEventListener("click", () => {
-      if (!audio.paused) {
-        audio.pause();
-        return;
-      }
-      if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) setLoading(true);
-      const playing = audio.play();
-      // Older browsers return nothing; a refused play() (autoplay policy, abort) just stays paused.
-      if (playing) playing.catch(() => setLoading(false));
-    });
 
     seek.addEventListener("input", () => {
       scrubbing = true;
@@ -331,19 +316,65 @@
       const direction = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
       if (!direction) return;
       event.preventDefault();
-      seekTo(audio.currentTime + direction * SEEK_STEP);
+      seekTo(media.currentTime + direction * SEEK_STEP);
     });
 
-    audio.addEventListener("loadedmetadata", () => {
-      if (!Number.isFinite(audio.duration)) return;
-      seek.max = String(Math.floor(audio.duration));
+    media.addEventListener("loadedmetadata", () => {
+      if (!Number.isFinite(media.duration)) return;
+      seek.max = String(Math.floor(media.duration));
       seek.disabled = false;
-      total.textContent = formatTime(audio.duration);
-      showPosition(audio.currentTime);
+      total.textContent = formatTime(media.duration);
+      showPosition(media.currentTime);
     });
 
-    audio.addEventListener("timeupdate", () => {
-      if (!scrubbing) showPosition(audio.currentTime);
+    media.addEventListener("timeupdate", () => {
+      if (!scrubbing) showPosition(media.currentTime);
+    });
+
+    bar.append(seek, glint);
+    return { bar: bar, seek: seek, time: time, showPosition: showPosition };
+  }
+
+  // Custom controls over a hidden <audio>: play/pause, seek bar, elapsed/total time.
+  function renderAudioPlayer(src, title) {
+    const player = document.createElement("div");
+    player.className = "audio-player";
+    player.setAttribute("role", "group");
+    player.setAttribute("aria-label", title ? "Audio di " + title : "Audio dell'enigma");
+
+    // preload="metadata": only the duration is fetched until the player presses play.
+    const audio = document.createElement("audio");
+    audio.preload = "metadata";
+    audio.hidden = true;
+    audio.src = src;
+    tracks.add(audio);
+
+    const control = orbButton("audio-orb", "audio-toggle", ["play", "pause"]);
+    const toggle = control.button;
+    toggle.setAttribute("aria-label", "Riproduci audio");
+
+    const track = document.createElement("div");
+    track.className = "audio-track";
+    const wake = createWake(audio, "audio", "Posizione audio");
+
+    const message = document.createElement("p");
+    message.className = "audio-message";
+    message.setAttribute("role", "status");
+
+    function setLoading(loading) {
+      player.classList.toggle("is-loading", loading);
+      toggle.setAttribute("aria-busy", String(loading));
+    }
+
+    toggle.addEventListener("click", () => {
+      if (!audio.paused) {
+        audio.pause();
+        return;
+      }
+      if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) setLoading(true);
+      const playing = audio.play();
+      // Older browsers return nothing; a refused play() (autoplay policy, abort) just stays paused.
+      if (playing) playing.catch(() => setLoading(false));
     });
 
     // Only one track at a time: starting this one pauses the others.
@@ -370,7 +401,7 @@
     // Finished: rewind so the next press starts from the top.
     audio.addEventListener("ended", () => {
       audio.currentTime = 0;
-      showPosition(0);
+      wake.showPosition(0);
     });
 
     audio.addEventListener("error", () => {
@@ -379,13 +410,258 @@
       setLoading(false);
       player.classList.add("is-error");
       toggle.disabled = true;
-      seek.disabled = true;
+      wake.seek.disabled = true;
       message.textContent = "Impossibile caricare l'audio.";
     });
 
-    bar.append(seek, glint);
-    track.append(bar, time);
-    player.append(audio, orb, track, message);
+    track.append(wake.bar, wake.time);
+    player.append(audio, control.orb, track, message);
+    return player;
+  }
+
+  // ---------- Video player ----------
+
+  const IDLE_DELAY = 2500; // ms without touch, mouse or keys before fullscreen controls step aside
+
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function exitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (!exit) return;
+    try {
+      const done = exit.call(document);
+      if (done && typeof done.catch === "function") done.catch(() => {});
+    } catch (_) {
+      // Already out of fullscreen.
+    }
+  }
+
+  // The audio player's twin over a <video>: a veil and a big orb rest on the picture while it
+  // is still, the orb and wake sit below it (over it in fullscreen).
+  function renderVideoPlayer(src, title) {
+    const player = document.createElement("div");
+    player.className = "video-player";
+    player.setAttribute("role", "group");
+    player.setAttribute("aria-label", title ? "Video di " + title : "Video dell'enigma");
+
+    // preload="auto": the decrypted file is already in memory.
+    const video = document.createElement("video");
+    video.className = "riddle-video";
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.preload = "auto";
+    video.src = src;
+    tracks.add(video);
+
+    const picture = document.createElement("div");
+    picture.className = "video-stage video-frame";
+    const veil = document.createElement("span");
+    veil.className = "video-veil";
+    veil.setAttribute("aria-hidden", "true");
+
+    // Only a target for pointers (taps on the picture already play): the bar button is the control.
+    const big = orbButton("video-big-orb", "video-big", ["play", "replay"]);
+    big.button.tabIndex = -1;
+    big.button.setAttribute("aria-hidden", "true");
+    const center = document.createElement("span");
+    center.className = "video-orb";
+    center.append(big.orb);
+    picture.append(video, veil, center);
+
+    const controls = document.createElement("div");
+    controls.className = "video-controls";
+    const control = orbButton("video-bar-orb", "video-toggle", ["play", "pause", "replay"]);
+    const toggle = control.button;
+    toggle.setAttribute("aria-label", "Riproduci video");
+
+    const track = document.createElement("div");
+    track.className = "video-track";
+    const wake = createWake(video, "video", "Posizione video");
+    track.append(wake.bar, wake.time);
+
+    const fullscreen = document.createElement("button");
+    fullscreen.type = "button";
+    fullscreen.className = "video-fullscreen";
+    fullscreen.setAttribute("aria-label", "Schermo intero");
+    fullscreen.append(
+      icon("icon-enter-fullscreen", ICONS.enterFullscreen),
+      icon("icon-exit-fullscreen", ICONS.exitFullscreen)
+    );
+
+    controls.append(control.orb, track, fullscreen);
+    player.append(picture, controls);
+
+    function setLoading(loading) {
+      player.classList.toggle("is-loading", loading);
+      toggle.setAttribute("aria-busy", String(loading));
+    }
+
+    function togglePlay() {
+      if (!video.paused) {
+        video.pause();
+        return;
+      }
+      if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) setLoading(true);
+      const playing = video.play();
+      if (playing) playing.catch(() => setLoading(false));
+    }
+
+    // Fullscreen and playing: the controls step aside after a moment without activity.
+    let idleTimer = 0;
+    function wakeControls() {
+      clearTimeout(idleTimer);
+      player.classList.remove("is-idle");
+      if (player.classList.contains("is-fullscreen") && !video.paused) {
+        idleTimer = setTimeout(() => player.classList.add("is-idle"), IDLE_DELAY);
+      }
+    }
+
+    toggle.addEventListener("click", togglePlay);
+
+    // A tap on the picture plays or pauses; while the fullscreen controls are hidden it only
+    // brings them back (read before the player's own pointerdown wakes them).
+    let tapWakes = false;
+    picture.addEventListener("pointerdown", () => {
+      tapWakes = player.classList.contains("is-idle");
+    });
+    picture.addEventListener("click", () => {
+      if (tapWakes) {
+        tapWakes = false;
+        return;
+      }
+      if (!player.classList.contains("is-error")) togglePlay();
+    });
+    // Mouse presses must not move focus onto the hidden big orb.
+    big.button.addEventListener("mousedown", (event) => event.preventDefault());
+
+    ["pointermove", "pointerdown", "keydown"].forEach((type) => player.addEventListener(type, wakeControls));
+
+    // Element fullscreen keeps our controls; iPhone only has the video's native fullscreen.
+    const requestFullscreen = player.requestFullscreen || player.webkitRequestFullscreen;
+    const canFullscreen =
+      typeof requestFullscreen === "function" && Boolean(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    fullscreen.hidden = !canFullscreen && typeof video.webkitEnterFullscreen !== "function";
+    let locked = false;
+
+    fullscreen.addEventListener("click", () => {
+      if (fullscreenElement() === player) {
+        exitFullscreen();
+        return;
+      }
+      try {
+        if (canFullscreen) {
+          const entering = requestFullscreen.call(player);
+          if (entering && typeof entering.catch === "function") entering.catch(() => {});
+        } else {
+          video.webkitEnterFullscreen();
+        }
+      } catch (_) {
+        // Refused (no metadata yet, or not allowed here): the player stays inline.
+      }
+    });
+
+    // A wide clip turns the phone sideways; desktops and browsers that refuse simply don't.
+    function lockLandscape() {
+      const orientation = screen.orientation;
+      if (!orientation || typeof orientation.lock !== "function" || video.videoWidth < video.videoHeight) return;
+      try {
+        orientation.lock("landscape").then(
+          () => {
+            locked = true;
+          },
+          () => {}
+        );
+      } catch (_) {
+        // Orientation lock unsupported.
+      }
+    }
+
+    function releaseOrientation() {
+      if (!locked) return;
+      locked = false;
+      try {
+        screen.orientation.unlock();
+      } catch (_) {
+        // Already released with fullscreen.
+      }
+    }
+
+    // A class, not :fullscreen: an unknown prefixed pseudo-class would drop a whole selector list.
+    function onFullscreenChange() {
+      const active = fullscreenElement() === player;
+      if (active === player.classList.contains("is-fullscreen")) return;
+      player.classList.toggle("is-fullscreen", active);
+      fullscreen.setAttribute("aria-label", active ? "Esci da schermo intero" : "Schermo intero");
+      if (active) lockLandscape();
+      else releaseOrientation();
+      wakeControls();
+    }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+    onLeave(() => {
+      clearTimeout(idleTimer);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      if (fullscreenElement() === player) exitFullscreen();
+      releaseOrientation();
+    });
+
+    // The picture keeps the clip's own shape (16:9 until the metadata says otherwise).
+    video.addEventListener("loadedmetadata", () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        picture.style.setProperty("--ratio", video.videoWidth + " / " + video.videoHeight);
+      }
+    });
+
+    // Only one medium at a time: starting the video pauses the riddle audio, and vice versa.
+    video.addEventListener("play", () => {
+      tracks.forEach((other) => {
+        if (other !== video) other.pause();
+      });
+      // The picture comes alive (or starts over): the sea answers once, not on every resume.
+      if (video.currentTime < START_WINDOW || player.classList.contains("is-ended")) bloomAt(big.orb);
+      player.classList.remove("is-ended");
+      player.classList.add("is-sounding", "is-started");
+      toggle.setAttribute("aria-label", "Metti in pausa");
+      wakeControls();
+    });
+
+    video.addEventListener("pause", () => {
+      setLoading(false);
+      player.classList.remove("is-sounding");
+      toggle.setAttribute("aria-label", "Riproduci video");
+      wakeControls();
+    });
+
+    video.addEventListener("waiting", () => setLoading(true));
+    video.addEventListener("playing", () => setLoading(false));
+    video.addEventListener("canplay", () => setLoading(false));
+
+    // The last frame stays under the veil with a replay orb; the next play starts over.
+    video.addEventListener("ended", () => {
+      player.classList.add("is-ended");
+      wake.showPosition(video.duration);
+      bloomAt(big.orb);
+    });
+
+    // Seeking back from the end turns the replay orb into a play orb again.
+    video.addEventListener("seeking", () => {
+      player.classList.toggle("is-ended", video.ended);
+    });
+
+    video.addEventListener("error", () => {
+      // Ignore the error caused by leaving the page and dropping the source.
+      if (!video.getAttribute("src")) return;
+      setLoading(false);
+      player.classList.add("is-error");
+      toggle.disabled = true;
+      fullscreen.disabled = true;
+      wake.seek.disabled = true;
+    });
+
     return player;
   }
 
@@ -742,23 +1018,16 @@
     }
 
     function mountVideo() {
-      const frame = document.createElement("div");
-      frame.className = "video-frame";
-      video = document.createElement("video");
-      video.className = "riddle-video";
-      video.controls = true;
-      video.playsInline = true;
-      video.setAttribute("playsinline", "");
-      video.preload = "metadata";
-      video.setAttribute("aria-label", title ? "Video di " + title : "Video dell'enigma");
+      // "#t=0.001" makes iOS paint the first frame instead of a black box.
+      const player = renderVideoPlayer(objectUrl + "#t=0.001", title);
+      const frame = player.querySelector(".video-frame");
+      video = player.querySelector("video");
       video.addEventListener("error", () => {
         // Ignore the error caused by leaving the page and dropping the source.
         if (!video.getAttribute("src")) return;
         showProblem("Questo browser non riesce a riprodurre il video.", null);
       });
-      video.src = objectUrl;
-      frame.append(video);
-      stage.insertBefore(frame, message);
+      stage.insertBefore(player, message);
       say("", false);
       // The riddle surfaces: the frame lights up and the sea blooms around it.
       requestAnimationFrame(() => {
