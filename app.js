@@ -22,6 +22,7 @@
     confirmInput: $("confirm-input"),
     confirmError: $("confirm-error"),
     authSubmit: $("auth-submit"),
+    authStatus: $("auth-status"),
     registerError: $("register-error"),
     puzzlesSection: $("puzzles-section"),
     puzzlesStatus: $("puzzles-status"),
@@ -262,6 +263,56 @@
       path.setAttribute("d", d);
       svg.appendChild(path);
     });
+    return svg;
+  }
+
+  // ---------- Waiting and success marks ----------
+
+  // The site's loader: a glint of light runs down a small wake and its head flares, with the
+  // operation named beside it. Callers announce it through their own role="status" region.
+  const LOADER_WAKE = "M2 13 C 10 15, 16 6, 25 7.5 S 40 6, 46 2.5";
+
+  function svgShape(tag, className, attributes) {
+    const shape = document.createElementNS(SVG_NS, tag);
+    shape.setAttribute("class", className);
+    Object.keys(attributes).forEach((name) => shape.setAttribute(name, attributes[name]));
+    return shape;
+  }
+
+  function wakeLoader(text) {
+    const loader = document.createElement("span");
+    loader.className = "loader";
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "loader-wake");
+    svg.setAttribute("viewBox", "0 0 48 16");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.append(
+      svgShape("path", "loader-trail", { d: LOADER_WAKE }),
+      svgShape("path", "loader-haze", { d: LOADER_WAKE, pathLength: "1" }),
+      svgShape("path", "loader-glint", { d: LOADER_WAKE, pathLength: "1" }),
+      svgShape("circle", "loader-speck loader-speck-near", { cx: "13", cy: "8.5", r: "0.9" }),
+      svgShape("circle", "loader-speck loader-speck-far", { cx: "34", cy: "4", r: "0.8" }),
+      svgShape("circle", "loader-head", { cx: "46", cy: "2.5", r: "1.9" })
+    );
+    const label = document.createElement("span");
+    label.className = "loader-text";
+    label.textContent = text;
+    loader.append(svg, label);
+    return loader;
+  }
+
+  // Saved: a small ring of light with a check drawing itself inside.
+  function checkBadge() {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "check-badge");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.append(
+      svgShape("circle", "badge-ring", { cx: "10", cy: "10", r: "8.25" }),
+      svgShape("path", "badge-check", { d: "M6.3 10.3 8.9 12.9 13.8 7.7", pathLength: "1" })
+    );
     return svg;
   }
 
@@ -1207,7 +1258,7 @@
     els.userBar.hidden = false;
     els.puzzlesSection.hidden = false;
     els.puzzlesView.replaceChildren();
-    els.puzzlesStatus.textContent = "Caricamento enigmi…";
+    els.puzzlesStatus.replaceChildren(wakeLoader("Caricamento enigmi…"));
 
     let puzzles, answers;
     try {
@@ -1481,16 +1532,20 @@
     status.className = "save-status";
     status.setAttribute("role", "status");
 
+    // Typing clears the last outcome, but never the loader of a save still on its way.
     input.addEventListener("input", () => {
+      if (button.disabled) return;
       status.textContent = "";
       status.className = "save-status";
     });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (button.disabled) return;
       button.disabled = true;
-      status.className = "save-status";
-      status.textContent = "Salvataggio…";
+      button.classList.add("is-pending");
+      status.className = "save-status is-pending";
+      status.replaceChildren(wakeLoader("Salvataggio…"));
       // The input stays editable while saving: keep what was actually sent.
       const submitted = input.value;
       try {
@@ -1512,7 +1567,7 @@
           return;
         }
         if (input.value === submitted) input.value = answer;
-        status.textContent = "Salvato ✓";
+        status.replaceChildren(checkBadge(), "Salvato");
         status.className = "save-status ok";
         celebrate(card, button);
       } catch (err) {
@@ -1526,6 +1581,7 @@
         status.className = "save-status error";
       } finally {
         button.disabled = false;
+        button.classList.remove("is-pending");
       }
     });
 
@@ -1606,8 +1662,19 @@
     els.confirmInput.type = show ? "text" : "password";
   }
 
-  // Disables the form's controls while a request is out (inputs stay as typed).
+  // Disables the form's controls while a request is out (inputs stay as typed); the submit
+  // button carries the loader, so nothing around it moves.
   function setAuthPending(pending) {
+    const login = authMode() === "login";
+    if (pending) {
+      // The button says it short enough for a 320 px screen; the live region says it whole.
+      els.authSubmit.replaceChildren(wakeLoader(login ? "Accesso in corso…" : "Registrazione…"));
+      els.authStatus.textContent = login ? "Accesso in corso…" : "Registrazione in corso…";
+    } else {
+      els.authSubmit.textContent = login ? "Accedi" : "Registrati";
+      els.authStatus.textContent = "";
+    }
+    els.authSubmit.classList.toggle("is-pending", pending);
     els.authSubmit.disabled = pending;
     els.passwordToggle.disabled = pending;
     modeInputs().forEach((radio) => {

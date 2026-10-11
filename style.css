@@ -424,6 +424,166 @@ button:disabled {
   }
 }
 
+/* ---------- Loader: a glint of light runs down a small wake, and its head flares ---------- */
+
+.loader {
+  --loader-base: rgba(143, 178, 204, 0.3);
+  --loader-light: var(--light);
+  --loader-beat: 1.8s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  /* Top, not middle: the loader then adds nothing to the line box it replaces. */
+  vertical-align: top;
+}
+
+.loader-wake {
+  flex-shrink: 0;
+  width: 42px;
+  height: 14px;
+  overflow: visible;
+}
+
+.loader-wake path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.loader-trail {
+  stroke: var(--loader-base);
+  stroke-width: 1.4;
+}
+
+/* One dash shorter than the path, starting before it and ending past it: a travelling glint. */
+.loader-haze,
+.loader-glint {
+  stroke: var(--loader-light);
+  stroke-dasharray: 0.34 1.4;
+  stroke-dashoffset: 0.34;
+  animation: loader-run var(--loader-beat) cubic-bezier(0.5, 0, 0.3, 1) infinite;
+}
+
+.loader-haze {
+  stroke-width: 4.5;
+  opacity: 0.25;
+}
+
+.loader-glint {
+  stroke-width: 1.7;
+}
+
+.loader-head {
+  fill: var(--loader-light);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: loader-flare var(--loader-beat) ease-out infinite;
+}
+
+/* Plankton beside the wake light up as the glint passes them. */
+.loader-speck {
+  fill: var(--loader-light);
+  opacity: 0.12;
+  animation: loader-twinkle var(--loader-beat) ease-in-out infinite;
+}
+
+.loader-speck-far {
+  animation-delay: 0.4s;
+}
+
+.loader-text {
+  min-width: 0;
+}
+
+@keyframes loader-run {
+  to {
+    stroke-dashoffset: -1.06;
+  }
+}
+
+@keyframes loader-flare {
+  0%,
+  52%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes loader-twinkle {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  35% {
+    opacity: 0.85;
+  }
+}
+
+/* Reduced motion: the whole wake stays lit and only breathes, still reading as "working". */
+@keyframes loader-breathe {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* The pending button keeps its size and colour; the loader inside it is the signal. */
+button.is-pending {
+  animation: none;
+}
+
+/* Save waits beside its status line: the button itself just rests. */
+.answer-form button.is-pending {
+  opacity: 0.6;
+}
+
+.auth-submit .loader {
+  --loader-base: rgba(233, 254, 255, 0.32);
+  --loader-light: #e9feff;
+}
+
+/* One line, always: the button never grows while it waits. */
+.auth-submit .loader-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Saved: a ring of light with a check that draws itself. */
+.check-badge {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+}
+
+.badge-ring {
+  fill: rgba(102, 246, 255, 0.14);
+  stroke: var(--light);
+  stroke-width: 1.2;
+}
+
+.badge-check {
+  fill: none;
+  stroke: #e9feff;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: badge-draw 0.5s var(--ease-out) 0.1s forwards;
+}
+
+@keyframes badge-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* ---------- Login / registration: one form, two modes ---------- */
 
 .auth-form {
@@ -1075,9 +1235,13 @@ input[aria-invalid="true"]:focus {
 }
 
 .save-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 10px;
   min-height: 1.5em;
   font-size: 0.9rem;
+  line-height: 1.5; /* text, loader and badge all fit the reserved line: no jump */
   color: var(--muted);
 }
 
@@ -2140,5 +2304,38 @@ code {
   .video-player.is-idle .video-controls {
     transform: none;
     filter: none;
+  }
+
+  /* Loader: no travelling glint; the lit wake breathes slowly instead. */
+  .loader .loader-haze,
+  .loader .loader-glint,
+  .loader .loader-head,
+  .loader .loader-speck {
+    animation: none !important;
+  }
+
+  .loader .loader-haze {
+    display: none;
+  }
+
+  .loader .loader-glint {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+
+  .loader .loader-head {
+    opacity: 1;
+    transform: none;
+  }
+
+  .loader .loader-speck {
+    opacity: 0.5;
+  }
+
+  .loader .loader-wake {
+    animation-name: loader-breathe !important;
+    animation-duration: 2.4s !important;
+    animation-timing-function: ease-in-out !important;
+    animation-iteration-count: infinite !important;
   }
 }
