@@ -1136,6 +1136,13 @@
     return svg;
   }
 
+  // Tab title per view: "Indizi · Caccia al Tesoro", "Enigma 1 · Caccia al Tesoro".
+  const SITE_TITLE = "Caccia al Tesoro";
+
+  function setPageTitle(page) {
+    document.title = page ? page + " · " + SITE_TITLE : SITE_TITLE;
+  }
+
   // New view: keyboard and screen reader focus land on its heading.
   function focusHeading(heading) {
     heading.tabIndex = -1;
@@ -1150,6 +1157,7 @@
     forgetIgnites();
     els.puzzlesView.replaceChildren();
     els.registerSection.hidden = false;
+    setPageTitle("");
     els.usernameInput.focus();
   }
 
@@ -1272,6 +1280,7 @@
     game.rendered = true;
     game.freshId = "";
 
+    setPageTitle("Indizi");
     window.scrollTo(0, notice ? 0 : game.indexScroll);
     focusHeading(heading);
   }
@@ -1439,6 +1448,7 @@
     els.puzzlesView.append(view);
     ignite(card, 0);
 
+    setPageTitle(String(puzzle.title || "").trim() || "Enigma");
     window.scrollTo(0, 0);
     focusHeading(title);
   }
