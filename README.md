@@ -35,6 +35,18 @@ Modifica [`puzzles.json`](puzzles.json) e fai push su `main`:
 
 - `id` deve essere unico e non va cambiato dopo la pubblicazione (le risposte sono legate all'id). Usa solo lettere, numeri, `-` e `_`.
 - Nel `text` puoi andare a capo con `\n`.
+- L'ordine nell'array decide la posizione mostrata sulla pagina dell'enigma ("I di II", "II di II"…).
+
+### Sottotitolo e suggerimento (facoltativi)
+
+Ogni enigma può avere due campi in più, scritti da te; se mancano (o sono vuoti) la pagina non mostra niente al loro posto:
+
+- `subtitle`: una riga sotto il titolo, in corsivo.
+- `hint`: un suggerimento nascosto sotto il testo, che il giocatore apre toccando **Serve un suggerimento?**. Anche qui puoi andare a capo con `\n`. Negli enigmi a tempo compare solo dopo l'apertura, insieme al testo.
+
+```json
+{ "id": "p1", "title": "Titolo", "subtitle": "Una riga sotto il titolo", "text": "Testo dell'enigma", "hint": "Un aiuto per chi è bloccato" }
+```
 
 Dopo l'accesso il giocatore vede la raccolta degli indizi (quanti enigmi ha risolto e le risposte salvate); ogni enigma ha una sua pagina all'indirizzo `…/#/enigma/<id>` (es. `#/enigma/p1`), che puoi anche condividere direttamente: chi non ha ancora fatto l'accesso ci arriva subito dopo il login.
 

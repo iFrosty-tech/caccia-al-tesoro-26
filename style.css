@@ -886,12 +886,20 @@ input[aria-invalid="true"]:focus {
 }
 
 /* Riddle page */
+.riddle-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   min-height: 44px;
-  margin: 8px 0 12px -10px;
+  margin-left: -10px;
   padding: 0 16px 0 8px;
   border-radius: 999px;
   color: var(--muted);
@@ -914,20 +922,141 @@ input[aria-invalid="true"]:focus {
   transform: scaleX(-1) translateX(3px);
 }
 
+/* Where this riddle sits in the hunt: "I di II". */
+.riddle-position {
+  /* Josefin sits high in its line box: nudged onto the back link's baseline. */
+  padding: 3px 4px 0 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.0625rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.riddle-position-current {
+  font-weight: 400;
+  color: var(--light);
+}
+
+.riddle-head {
+  margin-bottom: 20px;
+}
+
 .riddle-title {
-  margin-bottom: 16px;
+  margin: 0;
   font-size: clamp(2.1rem, 10vw, 2.75rem);
   font-weight: 200;
   line-height: 1.1;
   text-shadow: 0 0 18px rgba(102, 246, 255, 0.3);
 }
 
+.riddle-subtitle {
+  margin-top: 10px;
+  max-width: 40ch;
+  font-family: var(--display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 1.25rem;
+  line-height: 1.35;
+  color: #bdf8ff;
+  text-wrap: balance;
+}
+
 .puzzle-text {
-  max-width: 60ch;
-  margin-bottom: 24px;
+  max-width: 62ch;
+  margin-bottom: 28px;
   white-space: pre-line;
   font-size: 1.0625rem;
-  line-height: 1.65;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.puzzle-text.is-empty {
+  display: none;
+}
+
+/* The player is the riddle: a small label and a wake hairline name it. */
+.riddle-media {
+  margin-bottom: 28px;
+}
+
+.riddle-media .audio-player {
+  margin-bottom: 0;
+}
+
+.media-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.media-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(102, 246, 255, 0.35), transparent);
+}
+
+/* Optional hint, folded until asked for. */
+.riddle-hint {
+  margin: -8px 0 24px;
+}
+
+.riddle-hint summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-left: -2px;
+  padding: 0 4px 0 2px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color 0.3s var(--ease-out);
+}
+
+.riddle-hint summary::-webkit-details-marker {
+  display: none;
+}
+
+.riddle-hint summary:hover,
+.riddle-hint[open] summary {
+  color: var(--light);
+}
+
+.riddle-hint summary:focus-visible {
+  outline: 2px solid var(--light);
+  outline-offset: 3px;
+}
+
+.hint-arrow {
+  width: 18px;
+  height: 18px;
+  transform: rotate(90deg);
+  transition: transform 0.35s var(--ease-out);
+}
+
+.riddle-hint[open] .hint-arrow {
+  transform: rotate(-90deg);
+}
+
+.riddle-hint-text {
+  max-width: 62ch;
+  margin-top: 4px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(102, 246, 255, 0.35);
+  white-space: pre-line;
+  line-height: 1.6;
+  overflow-wrap: break-word;
 }
 
 /* The answer sits apart from the riddle, behind a faint line of water. */
@@ -1366,6 +1495,10 @@ input[aria-invalid="true"]:focus {
   margin-bottom: 4px;
 }
 
+.reveal .media-label {
+  margin-bottom: 12px;
+}
+
 .reveal-lock {
   padding: 4px 0 8px;
 }
@@ -1699,27 +1832,24 @@ input[aria-invalid="true"]:focus {
   cursor: none;
 }
 
-/* Riddles rest in the dark until they scroll into view. */
+/* A riddle page shows its riddle at once: the panel surfaces gently, already readable. */
 .js .puzzle {
+  animation: surface 0.6s var(--ease-out) backwards;
   transition:
-    opacity 1.2s var(--ease-out),
-    filter 1.2s var(--ease-out),
-    transform 1.2s var(--ease-out),
     border-color 0.8s var(--ease-out),
     box-shadow 0.8s var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 140ms);
 }
 
-.js .puzzle:not(.lit) {
-  opacity: 0.25;
-  filter: blur(4px) brightness(0.6);
-  transform: translateY(18px);
+@keyframes surface {
+  from {
+    opacity: 0.6;
+    transform: translateY(8px);
+  }
 }
 
 .js .puzzle::before {
   transform: scaleX(0);
-  transition: transform 1.4s var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 140ms + 200ms);
+  transition: transform 1.4s var(--ease-out) 150ms;
 }
 
 .js .puzzle.lit::before {
@@ -1732,18 +1862,18 @@ input[aria-invalid="true"]:focus {
     opacity 0.9s var(--ease-out),
     transform 0.9s var(--ease-out),
     filter 0.9s var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 140ms + 450ms);
+  transition-delay: 150ms;
 }
 
 .js .puzzle .audio-seek {
   clip-path: inset(-20px -20px -20px -20px);
   transition: clip-path 1.4s var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 140ms + 650ms);
+  transition-delay: 300ms;
 }
 
 .js .puzzle .audio-time {
   transition: opacity 0.9s var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 140ms + 1000ms);
+  transition-delay: 600ms;
 }
 
 .js .puzzle:not(.lit) .audio-orb {
@@ -1907,7 +2037,7 @@ code {
 /* Changing view: the new page's frame rises out of the water, its panels then ignite. */
 .js .progress,
 .js .route-notice,
-.js .back-link {
+.js .riddle-nav {
   animation: rise 0.9s var(--ease-out) both;
 }
 
@@ -1980,7 +2110,6 @@ code {
     transition-delay: 0ms !important;
   }
 
-  .js .puzzle:not(.lit),
   .js .tile.ignite:not(.lit) {
     opacity: 1;
     filter: none;

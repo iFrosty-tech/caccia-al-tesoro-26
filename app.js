@@ -1049,6 +1049,7 @@
         if (!video.getAttribute("src")) return;
         showProblem("Questo browser non riesce a riprodurre il video.", null);
       });
+      stage.insertBefore(mediaLabel("Guarda l'enigma"), message);
       stage.insertBefore(player, message);
       say("", false);
       // The riddle surfaces: the frame lights up and the sea blooms around it.
@@ -1349,7 +1350,67 @@
     return tile;
   }
 
-  // Riddle page: text, optional audio and the answer form, pre-filled with the saved answer.
+  // Optional organizer-written text field: "" when absent or blank.
+  function optionalText(value) {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  const ROMAN = [
+    [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"],
+    [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+  ];
+
+  function toRoman(number) {
+    let rest = Math.floor(number);
+    let out = "";
+    ROMAN.forEach(([value, letters]) => {
+      while (rest >= value) {
+        out += letters;
+        rest -= value;
+      }
+    });
+    return out;
+  }
+
+  // "I di II": where this riddle sits in puzzles.json, read as "Enigma 1 di 2".
+  function riddlePosition(puzzle) {
+    const total = game.puzzles.length;
+    const place = game.puzzles.indexOf(puzzle) + 1;
+    const position = document.createElement("p");
+    position.className = "riddle-position";
+    const shown = document.createElement("span");
+    shown.setAttribute("aria-hidden", "true");
+    const current = document.createElement("span");
+    current.className = "riddle-position-current";
+    current.textContent = toRoman(place);
+    shown.append(current, " di " + toRoman(total));
+    position.append(visuallyHidden("Enigma " + place + " di " + total), shown);
+    return position;
+  }
+
+  // Small label over a player, so it reads as the riddle itself and not decoration.
+  function mediaLabel(text) {
+    const label = document.createElement("p");
+    label.className = "media-label";
+    label.textContent = text;
+    return label;
+  }
+
+  // Optional hint, folded away until the player asks for it.
+  function renderHint(hint) {
+    const details = document.createElement("details");
+    details.className = "riddle-hint";
+    const summary = document.createElement("summary");
+    summary.append("Serve un suggerimento?", chevron("hint-arrow"));
+    const body = document.createElement("p");
+    body.className = "riddle-hint-text";
+    body.textContent = hint;
+    details.append(summary, body);
+    return details;
+  }
+
+  // Riddle page: title, optional subtitle, text, optional media and hint, then the answer
+  // form, pre-filled with the saved answer.
   function renderRiddle(puzzle) {
     const session = game.session;
     const loadId = game.loadId;
@@ -1358,21 +1419,39 @@
     const view = document.createElement("div");
     view.className = "view riddle-view";
 
+    const nav = document.createElement("div");
+    nav.className = "riddle-nav";
     const back = document.createElement("a");
     back.className = "back-link";
     back.href = "#/";
     back.append(chevron("back-arrow"), "Indizi");
+    nav.append(back, riddlePosition(puzzle));
 
     const card = document.createElement("article");
     card.className = "card puzzle";
 
+    const head = document.createElement("header");
+    head.className = "riddle-head";
     const title = document.createElement("h2");
     title.className = "riddle-title";
     title.textContent = String(puzzle.title || "");
+    head.append(title);
+    const subtitleText = optionalText(puzzle.subtitle);
+    if (subtitleText) {
+      const subtitle = document.createElement("p");
+      subtitle.className = "riddle-subtitle";
+      subtitle.textContent = subtitleText;
+      head.append(subtitle);
+    }
 
     const text = document.createElement("p");
     text.className = "puzzle-text";
     text.textContent = String(puzzle.text || "");
+    // No text yet (a riddle that is only audio or video): no empty paragraph either.
+    if (!text.textContent.trim()) text.classList.add("is-empty");
+
+    const hintText = optionalText(puzzle.hint);
+    const hint = hintText ? renderHint(hintText) : null;
 
     const form = document.createElement("form");
     form.className = "answer-form";
@@ -1452,26 +1531,33 @@
 
     row.append(input, button);
     form.append(label, row, status);
-    card.append(title, text);
+    card.append(head, text);
     // Optional track, between the riddle and the answer.
     if (typeof puzzle.audio === "string" && puzzle.audio.trim() !== "") {
-      card.append(renderAudioPlayer(puzzle.audio.trim(), String(puzzle.title || "")));
+      const media = document.createElement("div");
+      media.className = "riddle-media";
+      media.append(mediaLabel("Ascolta l'enigma"), renderAudioPlayer(puzzle.audio.trim(), String(puzzle.title || "")));
+      card.append(media);
     }
     // Timed or video riddle: only the countdown (then the video) shows until it is revealed.
     if (hasVideo(puzzle) || remainingMs(puzzle) > 0) {
       text.hidden = true;
       form.hidden = true;
+      if (hint) hint.hidden = true;
       card.append(
         renderTimedStage(puzzle, () => {
           text.hidden = false;
           form.hidden = false;
+          if (hint) hint.hidden = false;
         })
       );
     }
+    if (hint) card.append(hint);
     card.append(form);
-    view.append(back, card);
+    view.append(nav, card);
     els.puzzlesView.append(view);
-    ignite(card, 0);
+    // A dedicated page shows its riddle at once; only the player's own light wakes up after.
+    requestAnimationFrame(() => card.classList.add("lit"));
 
     setPageTitle(String(puzzle.title || "").trim() || "Enigma");
     window.scrollTo(0, 0);
