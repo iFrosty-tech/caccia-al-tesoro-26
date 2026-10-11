@@ -1641,8 +1641,6 @@
     els.authSubmit.textContent = register ? "Registrati" : "Accedi";
     // Password managers offer a saved password on login and a new one on registration.
     els.passwordInput.autocomplete = register ? "new-password" : "current-password";
-    if (register) els.passwordInput.setAttribute("aria-describedby", "password-note");
-    else els.passwordInput.removeAttribute("aria-describedby");
     els.confirmInput.disabled = !register;
     showConfirmError("");
     els.registerError.textContent = "";

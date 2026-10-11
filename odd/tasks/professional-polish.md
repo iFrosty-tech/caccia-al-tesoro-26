@@ -39,6 +39,9 @@ single-pr (~900 authored lines forecast; user fast-forwards feature branches int
 
 ## Progress / evidence
 - Branch `feat/professional-polish` from main 3e8f54f (first reviewed boundary).
+- Commits: T1 be6f5dc, T2 02ed939, T3 c846d59, T4 2f93c56. Parent spot check: `node --check app.js` OK, screenshots of login (390) and riddle p1 with fields (390) inspected.
+- Review of 3e8f54f..2f93c56: assess medium (slice_budget_reached, 1050 lines) → consent granted → native review (1 lens, reliability) approved, 0 findings, acknowledged (lineage review-aa1af70dd719fa51, authority burned). Reviewed boundary advances to 2f93c56.
+- User follow-up: removed the organizer password note from the registration form (and its `.field-note` style / `aria-describedby` wiring).
 
 ## Next step
-Parent spot check and native review of the four work-unit commits.
+User decision on push/merge to main; check WhatsApp preview and iOS home screen after deploy.

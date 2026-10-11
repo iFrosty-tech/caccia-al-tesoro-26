@@ -684,12 +684,6 @@ button.is-pending {
   color: var(--muted);
 }
 
-.field-note {
-  font-size: 0.875rem;
-  line-height: 1.45;
-  color: var(--muted);
-}
-
 .field-error {
   font-size: 0.9rem;
   line-height: 1.45;
