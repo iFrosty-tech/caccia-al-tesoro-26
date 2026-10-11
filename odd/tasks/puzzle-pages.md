@@ -39,5 +39,7 @@ single-pr (~350 lines forecast)
 
 - T1 commit 1584124. Assess: medium, slice_budget_reached (711 lines; untracked .atl/ .impeccable/ excluded) -> consent granted -> native review (1 lens, reliability) approved and acknowledged (lineage review-22d99149ef6e2e76, authority burned). Advisory follow-ups (non-blocking): R3-save-reads-live-input (app.js:694, local answer rebuilt from live input instead of the submitted value), R3-save-after-navigate-stale-index (app.js:691, save resolving after navigating back leaves index stale and freshId dangling), R3-no-committed-tests (router checks live only in the scratchpad harness).
 
+- Follow-up fix (user-authorized): save keeps the submitted value (R3-save-reads-live-input) and re-renders the index when a save resolves after leaving the riddle page (R3-save-after-navigate-stale-index). Evidence: node --check OK; harness 28/28 PASS, no console errors. The two race scenarios themselves were not exercised by the harness (no delayed save stub). R3-no-committed-tests stays open.
+
 ## Next step
-User decision: fix the two advisory WARNINGs as a follow-up commit; then push/merge and real-device check on GitHub Pages.
+User local check, then push/merge and real-device check on GitHub Pages.

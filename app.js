@@ -681,20 +681,27 @@
       button.disabled = true;
       status.className = "save-status";
       status.textContent = "Salvataggio…";
+      // The input stays editable while saving: keep what was actually sent.
+      const submitted = input.value;
       try {
         await api("saveAnswer", {
           username: session.username,
           token: session.token,
           puzzleId: puzzle.id,
-          answer: input.value,
+          answer: submitted,
         });
         // Logged out while saving: this page and its state are gone.
         if (loadId !== game.loadId) return;
         // Same trim as the server, so the index shows exactly what was stored.
-        const answer = input.value.trim();
-        input.value = answer;
+        const answer = submitted.trim();
         game.answers[puzzle.id] = answer;
         game.freshId = answer ? String(puzzle.id) : "";
+        // Left the page while saving: refresh the index if it is showing.
+        if (!card.isConnected) {
+          if (els.puzzlesView.querySelector(".index-view")) renderRoute();
+          return;
+        }
+        if (input.value === submitted) input.value = answer;
         status.textContent = "Salvato ✓";
         status.className = "save-status ok";
         celebrate(card, button);
