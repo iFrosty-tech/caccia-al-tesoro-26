@@ -74,19 +74,56 @@
     </p>
 
     <section id="register-section" class="card panel" hidden>
-      <h2>Entra o registrati</h2>
-      <p class="muted">Accedi con username e password, oppure registrati se è la prima volta.</p>
-      <form id="register-form" class="stack">
-        <label for="username-input" class="visually-hidden">Username</label>
-        <input id="username-input" name="username" type="text" autocomplete="nickname"
-               minlength="2" maxlength="30" required placeholder="Il tuo username">
-        <label for="password-input" class="visually-hidden">Password</label>
-        <input id="password-input" name="password" type="password" autocomplete="current-password"
-               maxlength="50" required placeholder="La tua password">
-        <div class="row">
-          <button type="submit" value="login">Accedi</button>
-          <button type="submit" value="register" class="btn-secondary">Registrati</button>
+      <h2>Entra nel gioco</h2>
+      <form id="register-form" class="auth-form" data-mode="register" novalidate>
+        <!-- One form, two modes: the toggle picks what the single submit button does. -->
+        <fieldset class="mode-switch">
+          <legend class="visually-hidden">Cosa vuoi fare</legend>
+          <label class="mode-option">
+            <input type="radio" name="auth-mode" value="login">
+            <span>Accedi</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="auth-mode" value="register" checked>
+            <span>Registrati</span>
+          </label>
+        </fieldset>
+
+        <div class="field">
+          <label for="username-input" class="field-label">Username</label>
+          <input id="username-input" name="username" type="text" autocomplete="username"
+                 autocapitalize="none" spellcheck="false" minlength="2" maxlength="30" required>
         </div>
+
+        <div class="field">
+          <label for="password-input" class="field-label">Password</label>
+          <div class="password-wrap">
+            <input id="password-input" name="password" type="password" autocomplete="new-password"
+                   maxlength="50" required aria-describedby="password-note">
+            <button id="password-toggle" type="button" class="password-toggle"
+                    aria-label="Mostra password" aria-pressed="false" aria-controls="password-input confirm-input">
+              <svg class="eye eye-open" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye eye-shut" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M4 20 20 4"></path>
+              </svg>
+            </button>
+          </div>
+          <p id="password-note" class="field-note register-only">L'organizzatore la vede: scegline una goliardica, non quella vera.</p>
+        </div>
+
+        <div class="field register-only" id="confirm-field">
+          <label for="confirm-input" class="field-label">Ripeti la password</label>
+          <input id="confirm-input" name="confirm" type="password" autocomplete="new-password"
+                 maxlength="50" aria-describedby="confirm-error">
+          <p id="confirm-error" class="field-error" role="alert"></p>
+        </div>
+
+        <button id="auth-submit" type="submit" class="auth-submit">Registrati</button>
       </form>
       <p id="register-error" class="error" role="alert"></p>
     </section>

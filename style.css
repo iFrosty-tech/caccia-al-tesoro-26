@@ -7,7 +7,7 @@
   --panel: rgba(10, 20, 34, 0.62);
   --panel-edge: rgba(102, 246, 255, 0.14);
   --field: rgba(3, 6, 11, 0.6);
-  --field-edge: rgba(143, 178, 204, 0.28);
+  --field-edge: #536a7f; /* 3.4:1 against the panel: a field reads as a field */
   --wake: #0b6ae0;
   --wake-bright: #1e8bff;
   --light: #66f6ff;
@@ -280,28 +280,9 @@ p {
   pointer-events: none;
 }
 
-.panel .muted {
-  margin-bottom: 18px;
-  font-size: 0.95rem;
-}
-
 .row {
   display: flex;
   gap: 10px;
-}
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stack .row {
-  margin-top: 6px;
-}
-
-.stack .row button {
-  flex: 1;
 }
 
 .hint {
@@ -441,6 +422,201 @@ button:disabled {
     opacity: 0.6;
     box-shadow: 0 0 26px -6px rgba(102, 246, 255, 0.7);
   }
+}
+
+/* ---------- Login / registration: one form, two modes ---------- */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+/* Segmented toggle built from native radios: arrow keys move between the modes. */
+.mode-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  padding: 4px;
+  min-width: 0;
+  border: 1px solid var(--field-edge);
+  border-radius: 999px;
+  background: var(--field);
+}
+
+/* The lit half slides under the chosen mode. */
+.mode-switch::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border: 1px solid rgba(102, 246, 255, 0.5);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(30, 139, 255, 0.34), rgba(11, 106, 224, 0.2));
+  box-shadow: inset 0 -1px 0 rgba(102, 246, 255, 0.45);
+  transition: transform 0.45s var(--ease-out);
+  pointer-events: none;
+}
+
+.auth-form[data-mode="register"] .mode-switch::before {
+  transform: translateX(100%);
+}
+
+.mode-option {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  cursor: pointer;
+}
+
+.mode-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mode-option span {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  transition: color 0.3s var(--ease-out);
+}
+
+.mode-option input:checked + span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mode-option:hover input:not(:checked):not(:disabled) + span {
+  color: var(--text);
+}
+
+.mode-option input:focus-visible + span {
+  outline: 2px solid var(--light);
+  outline-offset: 2px;
+}
+
+.mode-option input:disabled,
+.mode-option input:disabled + span {
+  cursor: progress;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.field-note {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.field-error {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--error);
+}
+
+.field-error:empty {
+  display: none;
+}
+
+input[aria-invalid="true"],
+input[aria-invalid="true"]:focus {
+  border-color: var(--error);
+}
+
+/* Fields that only exist while registering. */
+.auth-form[data-mode="login"] .register-only {
+  display: none;
+}
+
+.password-wrap {
+  position: relative;
+  display: flex;
+}
+
+.password-wrap input {
+  padding-right: 52px;
+}
+
+/* Show/hide sits inside the field, out of the way of the text. */
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+  transform: translateY(-50%);
+}
+
+.password-toggle::after {
+  display: none;
+}
+
+.password-toggle:hover {
+  color: var(--light);
+  box-shadow: none;
+}
+
+.password-toggle:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.password-toggle:disabled {
+  animation: none;
+  opacity: 0.5;
+}
+
+.eye {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.eye-shut,
+.password-toggle[aria-pressed="true"] .eye-open {
+  display: none;
+}
+
+.password-toggle[aria-pressed="true"] .eye-shut {
+  display: block;
+}
+
+.auth-submit {
+  margin-top: 4px;
 }
 
 /* ---------- Riddles ---------- */

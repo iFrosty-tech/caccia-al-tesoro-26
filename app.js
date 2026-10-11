@@ -5,6 +5,7 @@
   "use strict";
 
   const STORAGE_KEY = "caccia-al-tesoro-session";
+  const KNOWN_KEY = "caccia-al-tesoro-known";
   const ANSWER_MAX = 500;
 
   const $ = (id) => document.getElementById(id);
@@ -17,6 +18,10 @@
     registerForm: $("register-form"),
     usernameInput: $("username-input"),
     passwordInput: $("password-input"),
+    passwordToggle: $("password-toggle"),
+    confirmInput: $("confirm-input"),
+    confirmError: $("confirm-error"),
+    authSubmit: $("auth-submit"),
     registerError: $("register-error"),
     puzzlesSection: $("puzzles-section"),
     puzzlesStatus: $("puzzles-status"),
@@ -66,6 +71,23 @@
       localStorage.removeItem(STORAGE_KEY);
     } catch (_) {
       // Nothing to clear.
+    }
+  }
+
+  // Set once this device has logged in or registered: the form then opens on "Accedi".
+  function hasPlayedHere() {
+    try {
+      return localStorage.getItem(KNOWN_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function rememberPlayedHere() {
+    try {
+      localStorage.setItem(KNOWN_KEY, "1");
+    } catch (_) {
+      // The next visit simply opens on "Registrati" again.
     }
   }
 
@@ -1158,6 +1180,9 @@
     els.puzzlesView.replaceChildren();
     els.registerSection.hidden = false;
     setPageTitle("");
+    // A device that has never played opens on "Registrati", afterwards on "Accedi".
+    setAuthMode(hasPlayedHere() ? "login" : "register");
+    if (els.passwordToggle.getAttribute("aria-pressed") === "true") togglePasswordVisibility();
     els.usernameInput.focus();
   }
 
@@ -1455,39 +1480,94 @@
 
   // ---------- Actions ----------
 
-  // Handles both "Accedi" and "Registrati": the clicked button picks the action.
+  // "login" or "register": what the single submit button (and Enter) does.
+  function authMode() {
+    return els.registerForm.dataset.mode === "login" ? "login" : "register";
+  }
+
+  function modeInputs() {
+    return els.registerForm.querySelectorAll('input[name="auth-mode"]');
+  }
+
+  // Switches the form between "Accedi" and "Registrati", keeping what was typed.
+  function setAuthMode(mode) {
+    const register = mode === "register";
+    els.registerForm.dataset.mode = register ? "register" : "login";
+    modeInputs().forEach((radio) => {
+      radio.checked = radio.value === els.registerForm.dataset.mode;
+    });
+    els.authSubmit.textContent = register ? "Registrati" : "Accedi";
+    // Password managers offer a saved password on login and a new one on registration.
+    els.passwordInput.autocomplete = register ? "new-password" : "current-password";
+    if (register) els.passwordInput.setAttribute("aria-describedby", "password-note");
+    else els.passwordInput.removeAttribute("aria-describedby");
+    els.confirmInput.disabled = !register;
+    showConfirmError("");
+    els.registerError.textContent = "";
+  }
+
+  function showConfirmError(text) {
+    els.confirmError.textContent = text;
+    if (text) els.confirmInput.setAttribute("aria-invalid", "true");
+    else els.confirmInput.removeAttribute("aria-invalid");
+  }
+
+  // One button shows or hides both password fields.
+  function togglePasswordVisibility() {
+    const show = els.passwordToggle.getAttribute("aria-pressed") !== "true";
+    els.passwordToggle.setAttribute("aria-pressed", String(show));
+    els.passwordInput.type = show ? "text" : "password";
+    els.confirmInput.type = show ? "text" : "password";
+  }
+
+  // Disables the form's controls while a request is out (inputs stay as typed).
+  function setAuthPending(pending) {
+    els.authSubmit.disabled = pending;
+    els.passwordToggle.disabled = pending;
+    modeInputs().forEach((radio) => {
+      radio.disabled = pending;
+    });
+  }
+
+  // The mode toggle decides the action: "Accedi" logs in, "Registrati" creates the account.
   async function onAuth(event) {
     event.preventDefault();
+    if (els.authSubmit.disabled) return;
     els.registerError.textContent = "";
-    // Browsers without SubmitEvent.submitter fall back to registration.
-    const action = event.submitter && event.submitter.value === "login" ? "login" : "register";
+    showConfirmError("");
+    const action = authMode();
     const username = els.usernameInput.value.trim();
     const password = els.passwordInput.value.trim();
     if (username.length < 2 || username.length > 30) {
       els.registerError.textContent = "Lo username deve avere tra 2 e 30 caratteri.";
+      els.usernameInput.focus();
       return;
     }
     if (password.length < 1 || password.length > 50) {
       els.registerError.textContent = "La password deve avere tra 1 e 50 caratteri.";
+      els.passwordInput.focus();
       return;
     }
-    const buttons = els.registerForm.querySelectorAll("button");
-    buttons.forEach((button) => {
-      button.disabled = true;
-    });
+    // Same trim as the password, so stray spaces never count as a mismatch.
+    if (action === "register" && els.confirmInput.value.trim() !== password) {
+      showConfirmError("Le due password non coincidono: riscrivila uguale.");
+      els.confirmInput.focus();
+      return;
+    }
+    setAuthPending(true);
     try {
       const data = await api(action, { username: username, password: password });
       const session = { username: data.username, token: data.token };
       saveSession(session);
+      rememberPlayedHere();
       els.usernameInput.value = "";
       els.passwordInput.value = "";
+      els.confirmInput.value = "";
       showPuzzles(session);
     } catch (err) {
       els.registerError.textContent = err.message;
     } finally {
-      buttons.forEach((button) => {
-        button.disabled = false;
-      });
+      setAuthPending(false);
     }
   }
 
@@ -1510,6 +1590,13 @@
       return;
     }
     els.registerForm.addEventListener("submit", onAuth);
+    modeInputs().forEach((radio) => {
+      radio.addEventListener("change", () => {
+        if (radio.checked) setAuthMode(radio.value);
+      });
+    });
+    els.passwordToggle.addEventListener("click", togglePasswordVisibility);
+    els.confirmInput.addEventListener("input", () => showConfirmError(""));
     els.logoutBtn.addEventListener("click", () => {
       // Ask first so a misclick does not log the player out.
       const confirmed = window.confirm("Vuoi uscire? Potrai rientrare con username e password.");
