@@ -42,6 +42,7 @@
     clockOffset: 0, // server clock minus this device's clock, learned from getPuzzleKey
     unlockAt: {}, // unlock times confirmed by the server, by riddle id
     unlocked: {}, // riddles whose key the server has already handed out
+    sealed: {}, // flag riddles the server still keeps closed, by riddle id
   };
 
   // ---------- Session storage (localStorage may be unavailable) ----------
@@ -171,6 +172,16 @@
     window.Plankton.bloom(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
+  // A riddle page may bring its own palette ("theme" in puzzles.json); the sea takes it too.
+  const THEMES = ["green"];
+
+  function applyTheme(name) {
+    const theme = THEMES.indexOf(name) >= 0 ? name : "";
+    if (theme) document.body.dataset.theme = theme;
+    else delete document.body.dataset.theme;
+    if (window.Plankton && window.Plankton.setTheme) window.Plankton.setTheme(theme);
+  }
+
   // Saved answer: the card flares and the sea blooms around the button.
   function celebrate(card, button) {
     card.classList.remove("saved");
@@ -249,6 +260,11 @@
       "M15 4v3.5a1.5 1.5 0 0 0 1.5 1.5H20a1 1 0 0 0 0-2h-3V4a1 1 0 0 0-2 0z",
       "M9 20v-3.5A1.5 1.5 0 0 0 7.5 15H4a1 1 0 0 0 0 2h3v3a1 1 0 0 0 2 0z",
       "M15 20v-3.5a1.5 1.5 0 0 1 1.5-1.5H20a1 1 0 0 1 0 2h-3v3a1 1 0 0 1-2 0z",
+    ],
+    // An arrow sinking into a tray.
+    download: [
+      "M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L11 12.6V4a1 1 0 0 1 1-1z",
+      "M5 15a1 1 0 0 1 1 1v2h12v-2a1 1 0 1 1 2 0v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5V16a1 1 0 0 1 1-1z",
     ],
   };
 
@@ -738,16 +754,41 @@
     return player;
   }
 
-  // ---------- Timed riddles: countdown, then the encrypted video ----------
+  // ---------- Locked riddles: countdown or seal, then the encrypted video ----------
 
-  // The video is published encrypted (IV || ciphertext || tag); only the server hands out the
-  // key, and only after the unlock time. The countdown here is cosmetic.
+  // The media is published encrypted (IV || ciphertext || tag); only the server hands out the
+  // key: a timed riddle after its unlock time (the countdown here is cosmetic), a flag riddle
+  // once the organizer ticks its box in the sheet.
   const IV_BYTES = 12;
   const RETRY_DELAYS = [2000, 4000, 8000, 15000, 30000]; // network/server hiccups, growing
   const MIN_KEY_INTERVAL = 1000; // never ask for the key more than once a second
+  const SEAL_POLL = 30000; // a sealed riddle asks the server again this often
 
   function hasVideo(puzzle) {
     return typeof puzzle.video === "string" && puzzle.video.trim() !== "";
+  }
+
+  // "gate": "flag" in puzzles.json: opened by the organizer, not by the clock.
+  function isFlagGated(puzzle) {
+    return puzzle.gate === "flag";
+  }
+
+  // A flag riddle the server still keeps closed (as of the login, or the riddle page's last check).
+  function isSealed(puzzle) {
+    const id = String(puzzle.id);
+    return isFlagGated(puzzle) && !game.unlocked[id] && Boolean(game.sealed[id]);
+  }
+
+  // Optional encrypted file to keep (e.g. a WAV to decode elsewhere): { file, name, type } or null.
+  function downloadSpec(puzzle) {
+    const spec = puzzle.download;
+    if (!spec || typeof spec.file !== "string" || !spec.file.trim()) return null;
+    const file = spec.file.trim();
+    return {
+      file: file,
+      name: optionalText(spec.name) || file.split("/").pop().replace(/\.enc$/, ""),
+      type: optionalText(spec.type) || "application/octet-stream",
+    };
   }
 
   // This device's clock, corrected by the last server sync.
@@ -858,13 +899,136 @@
     return crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.subarray(0, IV_BYTES) }, key, bytes.subarray(IV_BYTES));
   }
 
-  // Countdown until the server says the time has come, then download, decrypt and play.
-  // `onReveal` shows the riddle text and the answer form once the video is ready.
-  function renderTimedStage(puzzle, onReveal) {
+  function canDecrypt() {
+    return Boolean(window.crypto && crypto.subtle && typeof URL.createObjectURL === "function");
+  }
+
+  // Download progress: a title, a wake of light filling up, and the amount received.
+  function progressMeter(label) {
+    const box = document.createElement("div");
+    box.className = "reveal-loader";
+    box.hidden = true;
+    const title = document.createElement("p");
+    title.className = "reveal-loader-title";
+    const bar = document.createElement("div");
+    bar.className = "reveal-bar";
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-label", label);
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    const amount = document.createElement("p");
+    amount.className = "reveal-amount";
+    box.append(title, bar, amount);
+
+    function show(received, total) {
+      if (total > 0) {
+        const percent = Math.min(100, Math.round((received / total) * 100));
+        bar.classList.remove("is-indeterminate");
+        bar.style.setProperty("--progress", String(Math.min(1, received / total)));
+        bar.setAttribute("aria-valuenow", String(percent));
+        amount.textContent = percent + "% · " + formatMegabytes(received) + " di " + formatMegabytes(total) + " MB";
+      } else {
+        bar.classList.add("is-indeterminate");
+        bar.removeAttribute("aria-valuenow");
+        amount.textContent = formatMegabytes(received) + " MB";
+      }
+    }
+    return { box: box, title: title, show: show };
+  }
+
+  // A file to keep: fetched and decrypted only when asked for, then handed to the browser as a
+  // download under its original name. `signal` aborts it and `keepUrl` frees its blob on leave.
+  function renderDownload(spec, keyBase64, signal, keepUrl) {
+    const box = document.createElement("div");
+    box.className = "riddle-media riddle-download";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-secondary download-button";
+    button.append(icon("download-icon", ICONS.download), "Scarica il file");
+
+    // Shown once the file is ready: a real link, so a tap can save it again (or for the first
+    // time, where the browser held back the automatic download).
+    const link = document.createElement("a");
+    link.className = "btn-secondary download-button download-save";
+    link.hidden = true;
+    link.append(icon("download-icon", ICONS.download), "Salva di nuovo");
+    // Old iOS ignores "download": the file then opens in a new tab, where it can be shared.
+    if ("download" in HTMLAnchorElement.prototype) link.download = spec.name;
+    else link.target = "_blank";
+
+    const name = document.createElement("p");
+    name.className = "download-name";
+    name.textContent = spec.name;
+
+    const meter = progressMeter("Download di " + spec.name);
+    const message = document.createElement("p");
+    message.className = "reveal-message";
+    message.setAttribute("role", "status");
+
+    function fail(text) {
+      meter.box.hidden = true;
+      button.hidden = false;
+      button.disabled = false;
+      message.textContent = text;
+      message.classList.add("is-error");
+    }
+
+    button.addEventListener("click", async () => {
+      if (button.disabled) return;
+      if (!canDecrypt()) {
+        fail("Questo browser non riesce ad aprire il file: prova con un browser aggiornato.");
+        return;
+      }
+      button.disabled = true;
+      button.hidden = true;
+      message.textContent = "";
+      message.classList.remove("is-error");
+      meter.box.hidden = false;
+      meter.title.textContent = "Il file sta affiorando…";
+      meter.show(0, 0);
+
+      let bytes;
+      try {
+        bytes = await download(spec.file, signal, meter.show);
+      } catch (_) {
+        if (!signal.aborted) fail("Download non riuscito. Controlla la rete e riprova.");
+        return;
+      }
+      if (signal.aborted) return;
+      meter.title.textContent = "Decifratura in corso…";
+      let plain;
+      try {
+        plain = await decryptMedia(bytes, keyBase64);
+      } catch (_) {
+        if (!signal.aborted) fail("Impossibile aprire il file: la chiave non corrisponde. Avvisa l'organizzatore.");
+        return;
+      }
+      if (signal.aborted) return;
+      bytes = null;
+
+      link.href = URL.createObjectURL(new Blob([plain], { type: spec.type }));
+      keepUrl(link.href);
+      plain = null;
+      meter.box.hidden = true;
+      link.hidden = false;
+      message.textContent = "File pronto. Se il download non è partito, tocca «Salva di nuovo».";
+      link.click();
+    });
+
+    box.append(mediaLabel("Il file dell'enigma"), button, link, name, meter.box, message);
+    return box;
+  }
+
+  // Locked riddle: a countdown (timed) or a seal (flag) until the server hands out the key, then
+  // download, decrypt and play the video. `onReveal` shows the riddle text and the answer form
+  // once the riddle is open.
+  function renderLockedStage(puzzle, onReveal) {
     const viewId = game.viewId;
     const session = game.session;
     const id = String(puzzle.id);
     const title = String(puzzle.title || "");
+    const flag = isFlagGated(puzzle);
     const alive = () => viewId === game.viewId;
 
     const stage = document.createElement("div");
@@ -874,25 +1038,36 @@
     lock.className = "reveal-lock";
     const clock = document.createElement("p");
     clock.className = "countdown";
-    clock.setAttribute("role", "timer");
     const when = document.createElement("p");
     when.className = "countdown-when";
     lock.append(clock, when);
 
-    const loader = document.createElement("div");
-    loader.className = "reveal-loader";
-    loader.hidden = true;
-    const loaderTitle = document.createElement("p");
-    loaderTitle.className = "reveal-loader-title";
-    const bar = document.createElement("div");
-    bar.className = "reveal-bar";
-    bar.setAttribute("role", "progressbar");
-    bar.setAttribute("aria-label", "Download del video");
-    bar.setAttribute("aria-valuemin", "0");
-    bar.setAttribute("aria-valuemax", "100");
-    const amount = document.createElement("p");
-    amount.className = "reveal-amount";
-    loader.append(loaderTitle, bar, amount);
+    // A flag riddle has no time to count down to: a seal, re-checked on its own and on demand.
+    let checkButton = null;
+    let checked = null;
+    if (flag) {
+      lock.classList.add("reveal-seal");
+      clock.classList.add("is-sealed");
+      clock.textContent = "Sigillato";
+      when.textContent = "Si svela al segnale dell'organizzatore. Resta pure qui: la pagina si apre da sola.";
+      const row = document.createElement("div");
+      row.className = "seal-row";
+      checkButton = document.createElement("button");
+      checkButton.type = "button";
+      checkButton.className = "btn-secondary seal-check";
+      checkButton.textContent = "Controlla ora";
+      checked = document.createElement("p");
+      checked.className = "seal-checked";
+      row.append(checkButton, checked);
+      lock.append(row);
+    } else {
+      clock.setAttribute("role", "timer");
+    }
+
+    const meter = progressMeter("Download del video");
+    const loader = meter.box;
+    const loaderTitle = meter.title;
+    const showProgress = meter.show;
 
     const message = document.createElement("p");
     message.className = "reveal-message";
@@ -909,23 +1084,37 @@
     let timer = 0;
     let attempt = 0;
     let requesting = false;
+    let manualCheck = false;
     let lastRequest = 0;
     let retryAction = null;
     let video = null;
-    let objectUrl = "";
+    const blobUrls = [];
     const abort = new AbortController();
+
+    function onVisible() {
+      // Back on the page: a sealed riddle looks again at once instead of waiting for its poll.
+      if (document.hidden || !flag || lock.hidden || requesting) return;
+      clearTimeout(timer);
+      requestKey();
+    }
+    document.addEventListener("visibilitychange", onVisible);
 
     onLeave(() => {
       clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       abort.abort();
       if (video) {
         video.pause();
         video.removeAttribute("src");
         video.load();
       }
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = "";
+      blobUrls.forEach((url) => URL.revokeObjectURL(url));
+      blobUrls.length = 0;
     });
+
+    function keepUrl(url) {
+      blobUrls.push(url);
+    }
 
     function schedule(fn, delay) {
       clearTimeout(timer);
@@ -949,6 +1138,38 @@
       say("Un attimo…", false);
       if (action) action();
     });
+
+    if (checkButton) {
+      checkButton.addEventListener("click", () => {
+        if (requesting) return;
+        clearTimeout(timer);
+        manualCheck = true;
+        requestKey();
+      });
+    }
+
+    // The check button carries the loader while a request is out, so the seal never jumps.
+    function setChecking(active) {
+      if (!checkButton) return;
+      checkButton.disabled = active;
+      checkButton.classList.toggle("is-pending", active);
+      if (active) checkButton.replaceChildren(wakeLoader("Controllo…"));
+      else checkButton.textContent = "Controlla ora";
+    }
+
+    // `checkedNow`: the server has just answered, so the last check time is fresh.
+    function showSeal(checkedNow) {
+      lock.hidden = false;
+      loader.hidden = true;
+      showProblem("", null);
+      if (checkedNow) {
+        const time = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        checked.textContent = "Ultimo controllo alle " + time;
+      }
+      if (manualCheck) say("Ancora sigillato. La pagina continua a controllare da sola.", false);
+      manualCheck = false;
+      schedule(requestKey, SEAL_POLL);
+    }
 
     function showCountdown() {
       lock.hidden = false;
@@ -983,6 +1204,7 @@
     async function requestKey() {
       if (requesting) return;
       requesting = true;
+      setChecking(true);
       lastRequest = Date.now();
       const sentAt = lastRequest;
       let data;
@@ -993,10 +1215,17 @@
         return;
       } finally {
         requesting = false;
+        if (alive()) setChecking(false);
       }
       if (!alive()) return;
       attempt = 0;
       if (data.locked) {
+        if (flag) {
+          game.sealed[id] = true;
+          say("", false);
+          showSeal(true);
+          return;
+        }
         // The server's clock wins; measure it at the middle of the round trip.
         const serverTime = Date.parse(data.serverNow);
         if (Number.isFinite(serverTime)) game.clockOffset = serverTime - (sentAt + Date.now()) / 2;
@@ -1007,23 +1236,25 @@
         return;
       }
       game.unlocked[id] = true;
-      loadVideo(String(data.key || ""));
+      delete game.sealed[id];
+      const key = String(data.key || "");
+      if (hasVideo(puzzle)) loadVideo(key);
+      else openRiddle(key);
     }
 
     function onKeyError(err) {
+      manualCheck = false;
       if (err instanceof ApiError && err.code === "AUTH") {
         logout();
         els.registerError.textContent = err.message;
         return;
       }
       // Only the opening sync failed: the countdown keeps going on this device's clock.
-      if (!lock.hidden && remainingMs(puzzle) > 0) return;
-      if (err.code === "NOT_CONFIGURED") {
-        showProblem("Il video non è ancora pronto, riprova tra poco.", requestKey);
-        return;
-      }
-      if (err.code === "BAD_REQUEST") {
-        showProblem(err.message, requestKey);
+      if (!flag && !lock.hidden && remainingMs(puzzle) > 0) return;
+      if (err.code === "NOT_CONFIGURED" || err.code === "BAD_REQUEST") {
+        // The seal is lifted (or the riddle is unknown): the problem replaces it.
+        if (flag) lock.hidden = true;
+        showProblem(err.code === "NOT_CONFIGURED" ? "Il video non è ancora pronto, riprova tra poco." : err.message, requestKey);
         return;
       }
       // Network, busy or server hiccup: try again on its own, waiting a little longer each time.
@@ -1033,25 +1264,11 @@
       schedule(requestKey, delay);
     }
 
-    function showProgress(received, total) {
-      if (total > 0) {
-        const percent = Math.min(100, Math.round((received / total) * 100));
-        bar.classList.remove("is-indeterminate");
-        bar.style.setProperty("--progress", String(Math.min(1, received / total)));
-        bar.setAttribute("aria-valuenow", String(percent));
-        amount.textContent = percent + "% · " + formatMegabytes(received) + " di " + formatMegabytes(total) + " MB";
-      } else {
-        bar.classList.add("is-indeterminate");
-        bar.removeAttribute("aria-valuenow");
-        amount.textContent = formatMegabytes(received) + " MB";
-      }
-    }
-
     async function loadVideo(keyBase64) {
       clearTimeout(timer);
       lock.hidden = true;
       showProblem("", null);
-      if (!window.crypto || !crypto.subtle || typeof URL.createObjectURL !== "function") {
+      if (!canDecrypt()) {
         showProblem("Questo browser non riesce ad aprire il video: prova con un browser aggiornato.", null);
         return;
       }
@@ -1083,14 +1300,15 @@
       if (!alive()) return;
       bytes = null;
 
-      objectUrl = URL.createObjectURL(new Blob([plain], { type: "video/mp4" }));
+      const objectUrl = URL.createObjectURL(new Blob([plain], { type: "video/mp4" }));
+      keepUrl(objectUrl);
       plain = null;
       loader.hidden = true;
-      mountVideo();
-      onReveal();
+      mountVideo(objectUrl);
+      openRiddle(keyBase64);
     }
 
-    function mountVideo() {
+    function mountVideo(objectUrl) {
       // No "#t=" fragment on the blob URL: older iOS WebKit fails to resolve it and refuses the
       // source. A tiny seek after the metadata paints the first frame instead of a black box.
       const player = renderVideoPlayer(objectUrl, title);
@@ -1116,7 +1334,27 @@
       });
     }
 
-    if (remainingMs(puzzle) > 0) {
+    // Open: the file to keep (with the same key), then the riddle text and the answer form.
+    function openRiddle(keyBase64) {
+      lock.hidden = true;
+      if (!video) {
+        say("", false);
+        stage.classList.add("is-revealed");
+      }
+      const spec = downloadSpec(puzzle);
+      if (spec) stage.insertBefore(renderDownload(spec, keyBase64, abort.signal, keepUrl), message);
+      onReveal();
+    }
+
+    if (flag) {
+      if (isSealed(puzzle)) {
+        showSeal(false);
+      } else {
+        lock.hidden = true;
+        say(hasVideo(puzzle) ? "Apertura del video…" : "Apertura dell'enigma…", false);
+      }
+      requestKey();
+    } else if (remainingMs(puzzle) > 0) {
       showCountdown();
       // Sync with the server clock (or open straight away if this device is running late).
       if (hasVideo(puzzle)) requestKey();
@@ -1256,6 +1494,7 @@
       clockOffset: 0,
       unlockAt: {},
       unlocked: {},
+      sealed: {},
     });
     els.registerSection.hidden = true;
     document.body.classList.add("is-playing");
@@ -1265,7 +1504,7 @@
     els.puzzlesView.replaceChildren();
     els.puzzlesStatus.replaceChildren(wakeLoader("Caricamento enigmi…"));
 
-    let puzzles, answers;
+    let puzzles, answers, locked;
     try {
       const results = await Promise.all([
         fetchPuzzles(),
@@ -1273,6 +1512,7 @@
       ]);
       puzzles = results[0];
       answers = results[1].answers || {};
+      locked = Array.isArray(results[1].locked) ? results[1].locked.map(String) : null;
     } catch (err) {
       if (loadId !== game.loadId) return;
       if (err instanceof ApiError && err.code === "AUTH") {
@@ -1288,6 +1528,11 @@
 
     game.answers = answers;
     game.puzzles = puzzles.filter((puzzle) => puzzle && puzzle.id != null);
+    // Flag riddles the server lists as closed (all of them, if it lists none: an older backend).
+    game.puzzles.forEach((puzzle) => {
+      const id = String(puzzle.id);
+      if (isFlagGated(puzzle) && (!locked || locked.indexOf(id) >= 0)) game.sealed[id] = true;
+    });
     renderRoute();
   }
 
@@ -1367,10 +1612,12 @@
     focusHeading(heading);
   }
 
-  // A riddle still waiting for its time gets a live countdown, registered in `clocks`.
+  // A riddle still waiting for its time gets a live countdown, registered in `clocks`; one
+  // waiting for the organizer's signal stays sealed.
   function renderTile(puzzle, clocks) {
     const answer = savedAnswer(puzzle.id);
-    const locked = !answer && remainingMs(puzzle) > 0;
+    const sealed = !answer && isSealed(puzzle);
+    const locked = sealed || (!answer && remainingMs(puzzle) > 0);
     const tile = document.createElement("a");
     tile.className = "tile" + (answer ? " is-solved" : "") + (locked ? " is-locked" : "");
     tile.href = riddleHref(puzzle.id);
@@ -1391,6 +1638,8 @@
     clue.className = "tile-clue";
     if (answer) {
       clue.append(visuallyHidden("Indizio raccolto: "), answer);
+    } else if (sealed) {
+      clue.append(visuallyHidden("Enigma chiuso, "), "ancora sigillato");
     } else if (locked) {
       const time = document.createElement("span");
       time.className = "tile-countdown";
@@ -1474,6 +1723,12 @@
 
     const view = document.createElement("div");
     view.className = "view riddle-view";
+
+    const theme = optionalText(puzzle.theme);
+    if (theme) {
+      applyTheme(theme);
+      onLeave(() => applyTheme(""));
+    }
 
     const nav = document.createElement("div");
     nav.className = "riddle-nav";
@@ -1600,13 +1855,14 @@
       media.append(mediaLabel("Ascolta l'enigma"), renderAudioPlayer(puzzle.audio.trim(), String(puzzle.title || "")));
       card.append(media);
     }
-    // Timed or video riddle: only the countdown (then the video) shows until it is revealed.
-    if (hasVideo(puzzle) || remainingMs(puzzle) > 0) {
+    // Timed, flag or video riddle: only the countdown or seal (then the video) shows until it
+    // is revealed.
+    if (hasVideo(puzzle) || isFlagGated(puzzle) || remainingMs(puzzle) > 0) {
       text.hidden = true;
       form.hidden = true;
       if (hint) hint.hidden = true;
       card.append(
-        renderTimedStage(puzzle, () => {
+        renderLockedStage(puzzle, () => {
           text.hidden = false;
           form.hidden = false;
           if (hint) hint.hidden = false;

@@ -12,6 +12,15 @@
   --wake-bright: #1e8bff;
   --light: #66f6ff;
   --light-soft: rgba(102, 246, 255, 0.35);
+  /* Channels of the accent lights, for glows at any opacity: rgba(var(--light-rgb), 0.5). */
+  --light-rgb: 102, 246, 255;
+  --wake-rgb: 30, 139, 255;
+  --wake-deep-rgb: 11, 106, 224;
+  --deep-rgb: 11, 60, 120;
+  --sheen-rgb: 190, 252, 255;
+  --foam-rgb: 233, 254, 255;
+  --foam: #e9feff; /* near-white light: icons, checks, the loader on a lit button */
+  --light-text: #bdf8ff; /* lit text: saved answers, hint text */
   --text: #e6f4ff;
   --muted: #8fb2cc;
   --placeholder: #7d9bb3;
@@ -24,6 +33,25 @@
   color-scheme: dark;
   accent-color: var(--light);
   scrollbar-color: var(--ghost) transparent;
+}
+
+/* Green sea: a riddle page with "theme": "green" in puzzles.json (set on body by app.js).
+   Same abyss, the plankton glows green; the wake stays dark enough for white text (5:1). */
+body[data-theme="green"] {
+  --light: #6dffb4;
+  --light-soft: rgba(109, 255, 180, 0.35);
+  --panel-edge: rgba(109, 255, 180, 0.14);
+  --wake: #08804a;
+  --wake-bright: #18c46e;
+  --light-rgb: 109, 255, 180;
+  --wake-rgb: 24, 196, 110;
+  --wake-deep-rgb: 8, 128, 74;
+  --deep-rgb: 8, 72, 50;
+  --sheen-rgb: 200, 255, 226;
+  --foam-rgb: 236, 255, 245;
+  --foam: #ecfff5;
+  --light-text: #c2ffdc;
+  accent-color: var(--light);
 }
 
 * {
@@ -46,14 +74,14 @@ body {
   background-color: var(--abyss);
   /* Depth beneath the plankton: deeper water rising from below. */
   background-image:
-    radial-gradient(120% 60% at 50% 115%, rgba(11, 60, 120, 0.42), transparent 70%),
+    radial-gradient(120% 60% at 50% 115%, rgba(var(--deep-rgb), 0.42), transparent 70%),
     radial-gradient(80% 40% at 15% -10%, rgba(26, 43, 63, 0.55), transparent 70%);
   background-attachment: fixed;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: rgba(102, 246, 255, 0.28);
+  background: rgba(var(--light-rgb), 0.28);
   color: #ffffff;
 }
 
@@ -109,7 +137,7 @@ main {
   color: var(--text);
   text-shadow:
     0 0 1px rgba(230, 244, 255, 0.9),
-    0 0 22px rgba(102, 246, 255, 0.38);
+    0 0 22px rgba(var(--light-rgb), 0.38);
 }
 
 .title-line {
@@ -121,7 +149,7 @@ main {
   font-size: 0.5em;
   font-style: italic;
   color: var(--light);
-  text-shadow: 0 0 18px rgba(102, 246, 255, 0.6);
+  text-shadow: 0 0 18px rgba(var(--light-rgb), 0.6);
 }
 
 .wake {
@@ -137,11 +165,11 @@ main {
   stroke: url(#wake-gradient);
   stroke-width: 1.6;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 4px rgba(102, 246, 255, 0.7));
+  filter: drop-shadow(0 0 4px rgba(var(--light-rgb), 0.7));
 }
 
 .wake-head {
-  fill: #e9feff;
+  fill: var(--foam);
   filter: drop-shadow(0 0 6px var(--light));
 }
 
@@ -276,7 +304,7 @@ p {
   left: 18px;
   right: 18px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(102, 246, 255, 0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.55), transparent);
   pointer-events: none;
 }
 
@@ -331,11 +359,11 @@ input::placeholder {
 input[type="text"]:focus,
 input[type="password"]:focus {
   outline: none;
-  border-color: rgba(102, 246, 255, 0.8);
+  border-color: rgba(var(--light-rgb), 0.8);
   background: rgba(6, 16, 28, 0.85);
   box-shadow:
-    0 0 0 3px rgba(102, 246, 255, 0.12),
-    0 0 24px -4px rgba(102, 246, 255, 0.45);
+    0 0 0 3px rgba(var(--light-rgb), 0.12),
+    0 0 24px -4px rgba(var(--light-rgb), 0.45);
 }
 
 button {
@@ -349,9 +377,9 @@ button {
   letter-spacing: 0.02em;
   color: #ffffff;
   background: var(--wake);
-  border: 1px solid rgba(102, 246, 255, 0.45);
+  border: 1px solid rgba(var(--light-rgb), 0.45);
   border-radius: var(--radius-control);
-  box-shadow: 0 10px 28px -12px rgba(30, 139, 255, 0.9);
+  box-shadow: 0 10px 28px -12px rgba(var(--wake-rgb), 0.9);
   cursor: pointer;
   touch-action: manipulation;
   transition:
@@ -366,7 +394,7 @@ button::after {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(110deg, transparent 30%, rgba(190, 252, 255, 0.45) 50%, transparent 70%);
+  background: linear-gradient(110deg, transparent 30%, rgba(var(--sheen-rgb), 0.45) 50%, transparent 70%);
   transform: translateX(-120%);
   transition: transform 0.8s var(--ease-out);
   pointer-events: none;
@@ -379,7 +407,7 @@ button:active::after {
 }
 
 button:hover {
-  box-shadow: 0 12px 32px -10px rgba(30, 139, 255, 1);
+  box-shadow: 0 12px 32px -10px rgba(var(--wake-rgb), 1);
 }
 
 button:active {
@@ -406,8 +434,8 @@ button:disabled {
 }
 
 .btn-secondary:hover {
-  border-color: rgba(102, 246, 255, 0.6);
-  box-shadow: 0 0 20px -6px rgba(102, 246, 255, 0.5);
+  border-color: rgba(var(--light-rgb), 0.6);
+  box-shadow: 0 0 20px -6px rgba(var(--light-rgb), 0.5);
 }
 
 .user-bar .btn-secondary {
@@ -420,7 +448,7 @@ button:disabled {
 @keyframes dim-pulse {
   50% {
     opacity: 0.6;
-    box-shadow: 0 0 26px -6px rgba(102, 246, 255, 0.7);
+    box-shadow: 0 0 26px -6px rgba(var(--light-rgb), 0.7);
   }
 }
 
@@ -542,8 +570,8 @@ button.is-pending {
 }
 
 .auth-submit .loader {
-  --loader-base: rgba(233, 254, 255, 0.32);
-  --loader-light: #e9feff;
+  --loader-base: rgba(var(--foam-rgb), 0.32);
+  --loader-light: var(--foam);
 }
 
 /* One line, always: the button never grows while it waits. */
@@ -562,14 +590,14 @@ button.is-pending {
 }
 
 .badge-ring {
-  fill: rgba(102, 246, 255, 0.14);
+  fill: rgba(var(--light-rgb), 0.14);
   stroke: var(--light);
   stroke-width: 1.2;
 }
 
 .badge-check {
   fill: none;
-  stroke: #e9feff;
+  stroke: var(--foam);
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -614,10 +642,10 @@ button.is-pending {
   bottom: 4px;
   left: 4px;
   width: calc(50% - 4px);
-  border: 1px solid rgba(102, 246, 255, 0.5);
+  border: 1px solid rgba(var(--light-rgb), 0.5);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(30, 139, 255, 0.34), rgba(11, 106, 224, 0.2));
-  box-shadow: inset 0 -1px 0 rgba(102, 246, 255, 0.45);
+  background: linear-gradient(180deg, rgba(var(--wake-rgb), 0.34), rgba(var(--wake-deep-rgb), 0.2));
+  box-shadow: inset 0 -1px 0 rgba(var(--light-rgb), 0.45);
   transition: transform 0.45s var(--ease-out);
   pointer-events: none;
 }
@@ -825,7 +853,7 @@ input[aria-invalid="true"]:focus {
   font-size: clamp(1.9rem, 8.5vw, 2.5rem);
   font-weight: 200;
   line-height: 1.1;
-  text-shadow: 0 0 18px rgba(102, 246, 255, 0.3);
+  text-shadow: 0 0 18px rgba(var(--light-rgb), 0.3);
 }
 
 .progress-count {
@@ -841,7 +869,7 @@ input[aria-invalid="true"]:focus {
 .progress-found {
   font-weight: 400;
   color: var(--light);
-  text-shadow: 0 0 12px rgba(102, 246, 255, 0.6);
+  text-shadow: 0 0 12px rgba(var(--light-rgb), 0.6);
 }
 
 /* One segment per riddle, in the same order as the tiles. */
@@ -861,7 +889,7 @@ input[aria-invalid="true"]:focus {
 
 .progress-line .is-lit {
   background: linear-gradient(90deg, var(--wake-bright), var(--light));
-  box-shadow: 0 0 8px rgba(102, 246, 255, 0.65);
+  box-shadow: 0 0 8px rgba(var(--light-rgb), 0.65);
 }
 
 /* The clue just collected draws itself into the line. */
@@ -933,14 +961,14 @@ input[aria-invalid="true"]:focus {
   left: 18px;
   right: 18px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(102, 246, 255, 0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.55), transparent);
   pointer-events: none;
 }
 
 .tile:hover {
   background: rgba(14, 28, 46, 0.7);
-  border-color: rgba(102, 246, 255, 0.4);
-  box-shadow: 0 18px 40px -24px rgba(30, 139, 255, 0.75);
+  border-color: rgba(var(--light-rgb), 0.4);
+  box-shadow: 0 18px 40px -24px rgba(var(--wake-rgb), 0.75);
 }
 
 .tile:active {
@@ -961,9 +989,9 @@ input[aria-invalid="true"]:focus {
 
 .tile.is-solved .tile-light {
   border-color: transparent;
-  background: #e9feff;
+  background: var(--foam);
   box-shadow:
-    0 0 0 3px rgba(102, 246, 255, 0.14),
+    0 0 0 3px rgba(var(--light-rgb), 0.14),
     0 0 12px 2px var(--light);
 }
 
@@ -998,7 +1026,7 @@ input[aria-invalid="true"]:focus {
   line-clamp: 2;
   overflow: hidden;
   font-weight: 500;
-  color: #bdf8ff;
+  color: var(--light-text);
 }
 
 .tile-arrow {
@@ -1020,14 +1048,14 @@ input[aria-invalid="true"]:focus {
 }
 
 .tile.is-locked .tile-light {
-  border-color: rgba(102, 246, 255, 0.5);
+  border-color: rgba(var(--light-rgb), 0.5);
   animation: tile-wait 3.2s ease-in-out infinite;
 }
 
 @keyframes tile-wait {
   50% {
-    border-color: rgba(102, 246, 255, 0.9);
-    box-shadow: 0 0 10px 1px rgba(102, 246, 255, 0.45);
+    border-color: rgba(var(--light-rgb), 0.9);
+    box-shadow: 0 0 10px 1px rgba(var(--light-rgb), 0.45);
   }
 }
 
@@ -1102,7 +1130,7 @@ input[aria-invalid="true"]:focus {
   font-size: clamp(2.1rem, 10vw, 2.75rem);
   font-weight: 200;
   line-height: 1.1;
-  text-shadow: 0 0 18px rgba(102, 246, 255, 0.3);
+  text-shadow: 0 0 18px rgba(var(--light-rgb), 0.3);
 }
 
 .riddle-subtitle {
@@ -1113,7 +1141,7 @@ input[aria-invalid="true"]:focus {
   font-style: italic;
   font-size: 1.25rem;
   line-height: 1.35;
-  color: #bdf8ff;
+  color: var(--light-text);
   text-wrap: balance;
 }
 
@@ -1154,7 +1182,7 @@ input[aria-invalid="true"]:focus {
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(102, 246, 255, 0.35), transparent);
+  background: linear-gradient(90deg, rgba(var(--light-rgb), 0.35), transparent);
 }
 
 /* Optional hint, folded until asked for. */
@@ -1207,7 +1235,7 @@ input[aria-invalid="true"]:focus {
   max-width: 62ch;
   margin-top: 4px;
   padding-left: 14px;
-  border-left: 1px solid rgba(102, 246, 255, 0.35);
+  border-left: 1px solid rgba(var(--light-rgb), 0.35);
   white-space: pre-line;
   line-height: 1.6;
   overflow-wrap: break-word;
@@ -1241,7 +1269,7 @@ input[aria-invalid="true"]:focus {
 
 .save-status.ok {
   color: var(--light);
-  text-shadow: 0 0 12px rgba(102, 246, 255, 0.55);
+  text-shadow: 0 0 12px rgba(var(--light-rgb), 0.55);
 }
 
 .save-status.error {
@@ -1278,7 +1306,7 @@ input[aria-invalid="true"]:focus {
 /* Halo: the water around the orb glows. */
 .orb::after {
   inset: -16px;
-  background: radial-gradient(closest-side, rgba(102, 246, 255, 0.36), rgba(30, 139, 255, 0.16) 60%, transparent);
+  background: radial-gradient(closest-side, rgba(var(--light-rgb), 0.36), rgba(var(--wake-rgb), 0.16) 60%, transparent);
   opacity: 0;
   transition: opacity 0.9s var(--ease-out);
 }
@@ -1291,12 +1319,12 @@ input[aria-invalid="true"]:focus {
   height: var(--orb);
   padding: 0;
   border-radius: 50%;
-  color: #e9feff;
+  color: var(--foam);
   background: radial-gradient(circle at 50% 35%, var(--wake-bright), var(--wake) 70%);
   border-color: var(--light-soft);
   box-shadow:
-    0 8px 22px -10px rgba(30, 139, 255, 0.95),
-    0 0 18px -6px rgba(102, 246, 255, 0.45);
+    0 8px 22px -10px rgba(var(--wake-rgb), 0.95),
+    0 0 18px -6px rgba(var(--light-rgb), 0.45);
   transition:
     transform 0.25s var(--ease-out),
     box-shadow 0.4s var(--ease-out),
@@ -1306,8 +1334,8 @@ input[aria-invalid="true"]:focus {
 
 .orb-button:hover {
   box-shadow:
-    0 10px 26px -8px rgba(30, 139, 255, 1),
-    0 0 24px -4px rgba(102, 246, 255, 0.6);
+    0 10px 26px -8px rgba(var(--wake-rgb), 1),
+    0 0 24px -4px rgba(var(--light-rgb), 0.6);
 }
 
 /* Press: the orb gives under the thumb, quickly. */
@@ -1322,7 +1350,7 @@ input[aria-invalid="true"]:focus {
   width: 22px;
   height: 22px;
   fill: currentColor;
-  filter: drop-shadow(0 0 4px rgba(233, 254, 255, 0.6));
+  filter: drop-shadow(0 0 4px rgba(var(--foam-rgb), 0.6));
   transition:
     opacity 0.2s var(--ease-out),
     transform 0.35s var(--ease-out);
@@ -1360,7 +1388,7 @@ input[aria-invalid="true"]:focus {
 /* Sounding: the orb is fully lit and the water around it glows. */
 .audio-player.is-sounding .audio-toggle,
 .video-player.is-sounding .video-toggle {
-  border-color: rgba(102, 246, 255, 0.8);
+  border-color: rgba(var(--light-rgb), 0.8);
 }
 
 .audio-player.is-sounding .audio-orb::after,
@@ -1372,8 +1400,8 @@ input[aria-invalid="true"]:focus {
 /* Rings of light leave the orb: while the audio sounds, or while the video waits for its first play. */
 .audio-player.is-sounding:not(.is-loading) .audio-orb::before,
 .video-player:not(.is-started):not(.is-loading):not(.is-error) .video-big-orb::before {
-  border: 1px solid rgba(102, 246, 255, 0.7);
-  box-shadow: 0 0 12px rgba(102, 246, 255, 0.35);
+  border: 1px solid rgba(var(--light-rgb), 0.7);
+  box-shadow: 0 0 12px rgba(var(--light-rgb), 0.35);
   animation: orb-ripple var(--ripple, var(--pulse, 2.8s)) var(--ease-out) infinite;
 }
 
@@ -1394,7 +1422,7 @@ input[aria-invalid="true"]:focus {
 .video-player.is-loading .video-big-orb::before {
   inset: -5px;
   opacity: 1;
-  background: conic-gradient(transparent 55%, rgba(30, 139, 255, 0.5) 80%, var(--light));
+  background: conic-gradient(transparent 55%, rgba(var(--wake-rgb), 0.5) 80%, var(--light));
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   animation: orb-search 1.4s linear infinite;
@@ -1453,7 +1481,7 @@ input[aria-invalid="true"]:focus {
   background:
     var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
     rgba(143, 178, 204, 0.22);
-  box-shadow: 0 0 10px -2px rgba(102, 246, 255, 0.45);
+  box-shadow: 0 0 10px -2px rgba(var(--light-rgb), 0.45);
 }
 
 .wake-seek::-moz-range-track {
@@ -1466,7 +1494,7 @@ input[aria-invalid="true"]:focus {
   height: 3px;
   border-radius: 3px;
   background: var(--wake-fill);
-  box-shadow: 0 0 10px -2px rgba(102, 246, 255, 0.6);
+  box-shadow: 0 0 10px -2px rgba(var(--light-rgb), 0.6);
 }
 
 /* The thumb is the wake's bright head. */
@@ -1476,7 +1504,7 @@ input[aria-invalid="true"]:focus {
   margin-top: -5.5px;
   border: 0;
   border-radius: 50%;
-  background: #e9feff;
+  background: var(--foam);
   box-shadow: 0 0 10px 1px var(--light);
   -webkit-appearance: none;
   appearance: none;
@@ -1488,7 +1516,7 @@ input[aria-invalid="true"]:focus {
   height: 14px;
   border: 0;
   border-radius: 50%;
-  background: #e9feff;
+  background: var(--foam);
   box-shadow: 0 0 10px 1px var(--light);
   transition: box-shadow 0.3s var(--ease-out), transform 0.25s var(--ease-out);
 }
@@ -1542,7 +1570,7 @@ input[aria-invalid="true"]:focus {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(closest-side, #f2feff, rgba(102, 246, 255, 0.55) 45%, transparent) 100% 50% / 40px 100% no-repeat;
+  background: radial-gradient(closest-side, #f2feff, rgba(var(--light-rgb), 0.55) 45%, transparent) 100% 50% / 40px 100% no-repeat;
   opacity: 0;
   transform: translateX(-100%);
 }
@@ -1607,7 +1635,7 @@ input[aria-invalid="true"]:focus {
 
 .is-sounding .media-time span:first-child {
   color: var(--light);
-  text-shadow: 0 0 10px rgba(102, 246, 255, 0.45);
+  text-shadow: 0 0 10px rgba(var(--light-rgb), 0.45);
 }
 
 /* Audio: the orb beside its wake. */
@@ -1672,7 +1700,7 @@ input[aria-invalid="true"]:focus {
   color: var(--text);
   text-shadow:
     0 0 1px rgba(230, 244, 255, 0.9),
-    0 0 24px rgba(102, 246, 255, 0.4);
+    0 0 24px rgba(var(--light-rgb), 0.4);
 }
 
 /* A day or more away: "2g 03:04:05" needs a smaller size to fit a phone. */
@@ -1714,7 +1742,7 @@ input[aria-invalid="true"]:focus {
   inset: 0;
   border-radius: 3px;
   background: linear-gradient(90deg, var(--wake-bright), var(--light));
-  box-shadow: 0 0 10px rgba(102, 246, 255, 0.6);
+  box-shadow: 0 0 10px rgba(var(--light-rgb), 0.6);
   transform: scaleX(var(--progress));
   transform-origin: left center;
   transition: transform 0.3s var(--ease-out);
@@ -1763,6 +1791,88 @@ input[aria-invalid="true"]:focus {
   padding: 8px 20px;
 }
 
+/* Flag riddle: a seal glowing slowly until the organizer's signal opens it. */
+.countdown.is-sealed {
+  font-size: clamp(2.5rem, 13vw, 3.75rem);
+  letter-spacing: 0.08em;
+  animation: seal-glow 4.8s ease-in-out infinite;
+}
+
+@keyframes seal-glow {
+  50% {
+    text-shadow:
+      0 0 1px rgba(230, 244, 255, 0.9),
+      0 0 36px rgba(var(--light-rgb), 0.7);
+  }
+}
+
+.seal-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 20px;
+}
+
+.seal-check {
+  min-height: 44px;
+  padding: 8px 20px;
+}
+
+.seal-checked {
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.seal-checked:empty {
+  display: none;
+}
+
+/* A file to keep, under the video: one button, then a link that saves it again. */
+.riddle-download {
+  margin: 28px 0 0;
+}
+
+.download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 1px solid var(--field-edge);
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    border-color 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out);
+}
+
+.download-button .media-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--light);
+  filter: none;
+}
+
+.download-save {
+  border-color: rgba(var(--light-rgb), 0.5);
+}
+
+.download-name {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 /* Video: the audio player's twin. A veil and a big orb rest on the still picture, the orb and wake below. */
 .video-player {
   --pulse: 2.8s;
@@ -1783,7 +1893,7 @@ input[aria-invalid="true"]:focus {
   border-radius: var(--radius-control);
   background: var(--abyss);
   box-shadow:
-    0 18px 40px -22px rgba(30, 139, 255, 0.7),
+    0 18px 40px -22px rgba(var(--wake-rgb), 0.7),
     0 24px 48px -24px rgba(0, 0, 0, 0.8);
   cursor: pointer;
   user-select: none;
@@ -1815,7 +1925,7 @@ input[aria-invalid="true"]:focus {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, rgba(11, 60, 120, 0.28), transparent 55%),
+    linear-gradient(to top, rgba(var(--deep-rgb), 0.28), transparent 55%),
     radial-gradient(closest-side, rgba(3, 6, 11, 0.3), rgba(3, 6, 11, 0.72));
   pointer-events: none;
   transition: opacity 0.4s var(--ease-out);
@@ -1914,8 +2024,8 @@ input[aria-invalid="true"]:focus {
 }
 
 .video-fullscreen:hover {
-  border-color: rgba(102, 246, 255, 0.6);
-  box-shadow: 0 0 20px -6px rgba(102, 246, 255, 0.5);
+  border-color: rgba(var(--light-rgb), 0.6);
+  box-shadow: 0 0 20px -6px rgba(var(--light-rgb), 0.5);
 }
 
 .video-fullscreen .media-icon {
@@ -2121,10 +2231,10 @@ input[aria-invalid="true"]:focus {
 
 @keyframes flare {
   0% {
-    border-color: rgba(102, 246, 255, 0.9);
+    border-color: rgba(var(--light-rgb), 0.9);
     box-shadow:
-      0 0 0 1px rgba(102, 246, 255, 0.5),
-      0 0 48px -6px rgba(102, 246, 255, 0.6);
+      0 0 0 1px rgba(var(--light-rgb), 0.5),
+      0 0 48px -6px rgba(var(--light-rgb), 0.6);
   }
   100% {
     border-color: var(--panel-edge);

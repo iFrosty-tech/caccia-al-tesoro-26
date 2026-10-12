@@ -1,12 +1,13 @@
 // Bioluminescent sea: a plankton field drawn on a fixed canvas behind the page.
 // Particles drift on a slow current, light up where a finger or pointer passes,
 // and an invisible wanderer keeps the sea alive when nobody touches it.
-// Exposes window.Plankton.bloom(x, y) for bursts of light (viewport coordinates).
+// Exposes window.Plankton.bloom(x, y) for bursts of light (viewport coordinates), and
+// window.Plankton.setTheme(name) to tint the sea for a themed page ("" is the night sea).
 
 (function () {
   "use strict";
 
-  window.Plankton = { bloom: function () {} };
+  window.Plankton = { bloom: function () {}, setTheme: function () {} };
 
   const canvas = document.getElementById("sea");
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d") : null;
@@ -29,9 +30,27 @@
   const pointer = { x: 0, y: 0, prevX: 0, prevY: 0, active: false, moved: false };
   const wanderer = { x: 0, y: 0, prevX: 0, prevY: 0 };
 
+  // Two kinds of plankton per palette (light and wake), plus the colour of a fresh flare.
+  // The tints mirror the --light-rgb and --wake-rgb tokens of each theme in style.css.
+  const PALETTES = {
+    "": { light: "102, 246, 255", wake: "30, 139, 255", flare: "#d9fdff", near: "#5fc8ff", far: "#3a86e8" },
+    green: { light: "109, 255, 180", wake: "24, 196, 110", flare: "#dcffec", near: "#5fe8a0", far: "#2fae6a" },
+  };
+  let palette = PALETTES[""];
+
   // Pre-rendered halos: drawing a sprite is far cheaper than shadowBlur.
-  const haloCyan = makeHalo("102, 246, 255");
-  const haloBlue = makeHalo("30, 139, 255");
+  let haloLight = makeHalo(palette.light);
+  let haloWake = makeHalo(palette.wake);
+
+  function setTheme(name) {
+    const next = PALETTES[name] || PALETTES[""];
+    if (next === palette) return;
+    palette = next;
+    haloLight = makeHalo(palette.light);
+    haloWake = makeHalo(palette.wake);
+    // The still frame of reduced motion is redrawn; the moving sea takes it on its next frame.
+    if (reducedMotion.matches) start();
+  }
 
   function makeHalo(rgb) {
     const sprite = document.createElement("canvas");
@@ -184,10 +203,10 @@
       if (g > 0.04) {
         const halo = s * (10 + g * 16);
         ctx.globalAlpha = Math.min(1, g * 0.9);
-        ctx.drawImage(hue[i] ? haloCyan : haloBlue, px[i] - halo / 2, py[i] - halo / 2, halo, halo);
+        ctx.drawImage(hue[i] ? haloLight : haloWake, px[i] - halo / 2, py[i] - halo / 2, halo, halo);
       }
       ctx.globalAlpha = Math.min(1, rest + g);
-      ctx.fillStyle = g > 0.3 ? "#d9fdff" : hue[i] ? "#5fc8ff" : "#3a86e8";
+      ctx.fillStyle = g > 0.3 ? palette.flare : hue[i] ? palette.near : palette.far;
       const core = s * (1 + g * 0.8);
       ctx.fillRect(px[i] - core / 2, py[i] - core / 2, core, core);
     }
@@ -279,7 +298,7 @@
     reducedMotion.addEventListener("change", start);
   }
 
-  window.Plankton = { bloom: bloom };
+  window.Plankton = { bloom: bloom, setTheme: setTheme };
 
   resize();
   start();

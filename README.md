@@ -99,6 +99,45 @@ Un enigma può comparire subito sul sito ma aprirsi solo a un'ora precisa: fino 
 
 Il video viene scaricato per intero prima di partire: tienilo leggero (un MP4 H.264 da qualche decina di MB va bene; GitHub rifiuta file oltre 100 MB).
 
+### Enigmi a segnale (si aprono con una spunta nel foglio)
+
+Un enigma può anche restare **sigillato finché non lo apri tu**, durante la caccia, mettendo una spunta nel Google Sheet. Il giocatore vede la scritta *Sigillato* (nessun conto alla rovescia); la pagina ricontrolla da sola ogni 30 secondi (e subito con **Controlla ora**) e si apre senza ricaricare appena la spunta c'è. Come per gli enigmi a tempo, i file sono pubblicati **solo cifrati** e il backend consegna la chiave (e accetta risposte) solo con la spunta messa.
+
+Il foglio **`Unlocks`** ha due colonne, `puzzleId` e `unlocked`: una riga per enigma, con una casella di controllo nella colonna B. Spunta = aperto; casella vuota, riga mancante o foglio mancante = sigillato. Puoi anche togliere la spunta per richiuderlo.
+
+1. Cifra i file con lo **stesso** script e la **stessa chiave** per tutti i file dell'enigma (ognuno riceve comunque un IV casuale suo):
+
+   ```sh
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/video.mp4" video/enigma-3.enc
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/sstv.wav" audio/enigma-3-sstv.enc --key <chiave stampata sopra>
+   ```
+
+2. In Apps Script aggiungi la proprietà dello script `MEDIA_KEY_p3` con la chiave (come per `MEDIA_KEY_p2`).
+3. In `Code.gs` l'enigma va in `FLAG_PUZZLES` (`p3` c'è già):
+
+   ```js
+   var FLAG_PUZZLES = {
+     p3: { keyProperty: 'MEDIA_KEY_p3' }
+   };
+   ```
+
+4. Ripubblica Apps Script come **nuova versione dello stesso deployment** (sezione 5).
+5. Nell'editor Apps Script scegli la funzione **`setupUnlocks`** dal menu in alto e premi **Esegui**, una volta sola: crea il foglio `Unlocks` con la riga `p3` e la casella **non spuntata**. Rieseguirla non tocca le righe che ci sono già (né le spunte).
+6. In [`puzzles.json`](puzzles.json) l'enigma ha `"gate": "flag"`; `download` offre un file da scaricare decifrato con il nome originale (qui il WAV per la decodifica SSTV, senza perdita di qualità); `theme: "green"` colora di verde la sua pagina:
+
+   ```json
+   {
+     "id": "p3", "title": "Enigma 3", "text": "Testo dell'enigma",
+     "video": "video/enigma-3.enc",
+     "download": { "file": "audio/enigma-3-sstv.enc", "name": "enigma-3-sstv.wav", "type": "audio/wav" },
+     "gate": "flag", "theme": "green"
+   }
+   ```
+
+7. Fai push dei file `.enc` e di `puzzles.json`. Quando vuoi aprire l'enigma, spunta la casella `unlocked` della riga `p3` nel foglio **`Unlocks`**: entro mezzo minuto lo vedono tutti.
+
+Prima di spuntare, controlla che la proprietà `MEDIA_KEY_p3` ci sia: senza, i giocatori vedono "Il video non è ancora pronto".
+
 ## 4. Vedere le risposte
 
 Apri il Google Sheet, foglio **`Answers`**: una riga per giocatore ed enigma (`username`, `puzzleId`, `answer`, `updatedAt`). Ogni modifica aggiorna la stessa riga.

@@ -4,6 +4,7 @@
  * Sheets (created automatically if missing):
  *   Users   -> username | token | createdAt | password
  *   Answers -> username | puzzleId | answer | updatedAt
+ *   Unlocks -> puzzleId | unlocked   (created by running setupUnlocks() once from the editor)
  *
  * Actions (POST body is a JSON string, sent as text/plain to avoid CORS preflight):
  *   { action: "register",     username, password }
@@ -16,6 +17,11 @@
  * lives only in Script Properties (Project Settings -> Script properties, e.g. MEDIA_KEY_p2):
  * getPuzzleKey hands it out only once this server's clock has passed unlockAt, and
  * saveAnswer refuses a riddle that is still locked.
+ *
+ * Flag riddles (FLAG_PUZZLES) work the same way, but open when the organizer ticks the
+ * riddle's checkbox in the Unlocks sheet (column B of its row). A missing sheet or row, or an
+ * unticked box, keeps the riddle locked. getMyAnswers lists the flag riddles still locked, so
+ * the index can show them closed.
  *
  * There is intentionally no endpoint that lists other players' data.
  * Passwords are stored in plain text on purpose: secrecy is not a goal and the
@@ -39,6 +45,13 @@ var LOCK_TIMEOUT_MS = 10000;
 var TIMED_PUZZLES = {
   p2: { unlockAt: '2026-10-11T18:30:00Z', keyProperty: 'MEDIA_KEY_p2' }
 };
+
+// Riddles released by the organizer's tick in the Unlocks sheet; the key is in Script Properties.
+var FLAG_PUZZLES = {
+  p3: { keyProperty: 'MEDIA_KEY_p3' }
+};
+var UNLOCKS_SHEET = 'Unlocks';
+var UNLOCKS_HEADERS = ['puzzleId', 'unlocked'];
 
 /** Error whose message is safe to show to the player. */
 function UserError(message, code) {
@@ -128,7 +141,12 @@ function getMyAnswers(req) {
       answers[rows[i][1]] = rows[i][2];
     }
   }
-  return { ok: true, username: user.username, answers: answers };
+  return {
+    ok: true,
+    username: user.username,
+    answers: answers,
+    locked: lockedFlagPuzzles(readUnlockFlags())
+  };
 }
 
 function saveAnswer(req) {
@@ -137,8 +155,8 @@ function saveAnswer(req) {
   if (!PUZZLE_ID_PATTERN.test(puzzleId)) {
     throw new UserError('Enigma non valido.');
   }
-  var timed = timedPuzzleState(puzzleId, new Date());
-  if (timed && timed.locked) {
+  var gate = puzzleGate(puzzleId, new Date(), readUnlockFlags);
+  if (gate && gate.locked) {
     throw new UserError('Questo enigma non è ancora stato svelato.', 'LOCKED');
   }
   var answer = typeof req.answer === 'string' ? req.answer.trim() : '';
@@ -163,29 +181,59 @@ function saveAnswer(req) {
   });
 }
 
-/** Returns the media key of a timed riddle, or locked + server time while it is still hidden. */
+/**
+ * Returns the media key of a gated riddle, or locked while it is still hidden: a timed riddle
+ * adds its unlock time and the server time, a flag riddle has no time to count down to.
+ */
 function getPuzzleKey(req) {
   authenticate(req);
   var puzzleId = typeof req.puzzleId === 'string' ? req.puzzleId.trim() : '';
-  return puzzleKeyResponse(puzzleId, new Date(), function (name) {
-    return PropertiesService.getScriptProperties().getProperty(name);
-  });
+  return puzzleKeyResponse(
+    puzzleId,
+    new Date(),
+    function (name) {
+      return PropertiesService.getScriptProperties().getProperty(name);
+    },
+    readUnlockFlags
+  );
 }
 
-/** Pure core of getPuzzleKey: clock and property reader are injected so it can be tested. */
-function puzzleKeyResponse(puzzleId, now, readProperty) {
-  var timed = timedPuzzleState(puzzleId, now);
-  if (!timed) {
+/** Pure core of getPuzzleKey: clock, property reader and flag reader are injected for tests. */
+function puzzleKeyResponse(puzzleId, now, readProperty, readFlags) {
+  var gate = puzzleGate(puzzleId, now, readFlags);
+  if (!gate) {
     throw new UserError('Enigma non valido.');
   }
-  if (timed.locked) {
-    return { ok: true, locked: true, unlockAt: timed.unlockAt, serverNow: now.toISOString() };
+  if (gate.locked) {
+    if (!gate.unlockAt) return { ok: true, locked: true };
+    return { ok: true, locked: true, unlockAt: gate.unlockAt, serverNow: now.toISOString() };
   }
-  var key = readProperty(TIMED_PUZZLES[puzzleId].keyProperty);
+  var key = readProperty(gate.keyProperty);
   if (!key || !String(key).trim()) {
     throw new UserError('Il video non è ancora pronto, riprova tra poco.', 'NOT_CONFIGURED');
   }
   return { ok: true, locked: false, key: String(key).trim() };
+}
+
+/**
+ * { locked, keyProperty, unlockAt? } for a timed or flag riddle, or null if it is not gated.
+ * readFlags() returns { puzzleId: true } for ticked rows; it is called only for flag riddles.
+ */
+function puzzleGate(puzzleId, now, readFlags) {
+  var timed = timedPuzzleState(puzzleId, now);
+  if (timed) {
+    return { locked: timed.locked, unlockAt: timed.unlockAt, keyProperty: TIMED_PUZZLES[puzzleId].keyProperty };
+  }
+  if (!Object.prototype.hasOwnProperty.call(FLAG_PUZZLES, puzzleId)) return null;
+  var flags = readFlags ? readFlags() : {};
+  return { locked: flags[puzzleId] !== true, keyProperty: FLAG_PUZZLES[puzzleId].keyProperty };
+}
+
+/** Ids of the flag riddles whose box is not ticked yet. */
+function lockedFlagPuzzles(flags) {
+  return Object.keys(FLAG_PUZZLES).filter(function (id) {
+    return flags[id] !== true;
+  });
 }
 
 /** { locked, unlockAt } for a timed riddle at the given time, or null if it is not timed. */
@@ -193,6 +241,58 @@ function timedPuzzleState(puzzleId, now) {
   if (!Object.prototype.hasOwnProperty.call(TIMED_PUZZLES, puzzleId)) return null;
   var unlockAt = new Date(TIMED_PUZZLES[puzzleId].unlockAt);
   return { locked: now.getTime() < unlockAt.getTime(), unlockAt: unlockAt.toISOString() };
+}
+
+// ---------- Unlocks sheet ----------
+
+/**
+ * Run once from the Apps Script editor (select setupUnlocks, then Run): creates the Unlocks
+ * sheet with one unticked checkbox per flag riddle. Safe to run again: existing rows, and
+ * boxes already ticked, are left alone. Not built with getSheet(): its plain-text column
+ * format would turn the checkbox values into text.
+ */
+function setupUnlocks() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(UNLOCKS_SHEET) || ss.insertSheet(UNLOCKS_SHEET);
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, UNLOCKS_HEADERS.length).setValues([UNLOCKS_HEADERS]);
+    sheet.setFrozenRows(1);
+  }
+  var present = {};
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    sheet.getRange(2, 1, lastRow - 1, 1).getValues().forEach(function (row) {
+      present[String(row[0]).trim()] = true;
+    });
+  }
+  Object.keys(FLAG_PUZZLES).forEach(function (id) {
+    if (present[id]) return;
+    var row = sheet.getLastRow() + 1;
+    // Plain text keeps the id as typed; insertCheckboxes leaves the box unticked (FALSE).
+    sheet.getRange(row, 1).setNumberFormat('@').setValue(id);
+    sheet.getRange(row, 2).insertCheckboxes();
+  });
+}
+
+/** { puzzleId: true } for every ticked row of the Unlocks sheet; {} when the sheet is missing. */
+function readUnlockFlags() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(UNLOCKS_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return {};
+  return unlockFlags(sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues());
+}
+
+/** Pure core of readUnlockFlags: the first row of each id decides; TRUE typed as text counts too. */
+function unlockFlags(rows) {
+  var flags = {};
+  var seen = {};
+  rows.forEach(function (row) {
+    var id = String(row[0]).trim();
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    var cell = row[1];
+    if (cell === true || /^(TRUE|VERO)$/i.test(String(cell).trim())) flags[id] = true;
+  });
+  return flags;
 }
 
 // ---------- Helpers ----------
