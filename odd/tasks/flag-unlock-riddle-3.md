@@ -38,6 +38,8 @@ single-pr (~500 authored lines forecast, binary assets excluded)
   - roundtrip3.mjs audio: SHA-256 match, tampered rejected.
   - cdp-flag.mjs 320 click: 29/0; 390 poll: 30/0 (real video 1920x1080 308 s, WAV download byte-identical, no overflow, theme only on p3, blobs revoked on leave).
   - Key scan working tree: 0 hits. Screenshots reviewed by parent (green sealed + unlocked pages).
+- T1 commit 7835f7e.
+- Review: assess medium, slice_budget_reached (869 lines) -> consent granted -> native review (1 lens, reliability) approved and acknowledged (lineage review-b5c24d77887c53ef, authority burned). Advisory follow-ups (non-blocking): R3-001 no committed tests for the flag gate (scratchpad only); R3-002 index tile seal state set at login only, index does not re-poll (tile shows "ancora sigillato" until the riddle is opened; page still opens); R3-003 getMyAnswers fails entirely if the Unlocks read throws (suggest try/catch omitting `locked`).
 - Not verified: real iOS device download; network-level abort on leave.
 
 ## Next step
