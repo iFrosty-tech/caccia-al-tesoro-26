@@ -109,7 +109,7 @@ Il foglio **`Unlocks`** ha due colonne, `puzzleId` e `unlocked`: una riga per en
 
    ```sh
    node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/video.mp4" video/enigma-3.enc
-   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/sstv.wav" audio/enigma-3-sstv.enc --key <chiave stampata sopra>
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/sstv.wav" audio/enigma-3.enc --key <chiave stampata sopra>
    ```
 
 2. In Apps Script aggiungi la proprietà dello script `MEDIA_KEY_p3` con la chiave (come per `MEDIA_KEY_p2`).
@@ -129,7 +129,7 @@ Il foglio **`Unlocks`** ha due colonne, `puzzleId` e `unlocked`: una riga per en
    {
      "id": "p3", "title": "Enigma 3", "text": "Testo dell'enigma",
      "video": "video/enigma-3.enc",
-     "download": { "file": "audio/enigma-3-sstv.enc", "name": "enigma-3-sstv.wav", "type": "audio/wav" },
+     "download": { "file": "audio/enigma-3.enc", "name": "enigma-3.wav", "type": "audio/wav" },
      "gate": "flag", "theme": "green"
    }
    ```
