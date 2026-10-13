@@ -17,7 +17,7 @@
     "title": "Enigma 3",
     "text": "La soluzione al terzo enigma è:",
     "video": "video/enigma-3.enc",
-    "download": { "file": "audio/enigma-3-sstv.enc", "name": "enigma-3-sstv.wav", "type": "audio/wav" },
+    "download": { "file": "audio/enigma-3.enc", "name": "enigma-3.wav", "type": "audio/wav" },
     "gate": "flag",
     "theme": "green"
   }
