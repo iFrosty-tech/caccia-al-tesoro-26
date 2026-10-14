@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow, noimageindex">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#03060b">
+  <meta name="color-scheme" content="dark">
+  <title>Caccia al Tesoro</title>
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <script>document.documentElement.classList.add("js");</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Josefin+Sans:wght@300&display=swap">
+  <link rel="stylesheet" href="tavola.css">
+</head>
+<body>
+  <!-- Hidden page: reached only through a clue, never linked from the site. -->
+  <canvas id="sea" class="sea" aria-hidden="true"></canvas>
+
+  <main class="stage">
+    <canvas id="board" class="board" role="img" aria-label="Tavola periodica" hidden></canvas>
+  </main>
+
+  <section id="notice" class="notice" aria-live="polite">
+    <p id="notice-title" class="notice-title">La tavola affiora…</p>
+    <div id="notice-bar" class="notice-bar" aria-hidden="true"></div>
+    <p id="notice-text" class="notice-text" hidden></p>
+    <a id="notice-login" class="notice-action" href="../" hidden>Accedi alla caccia</a>
+    <button id="notice-retry" class="notice-action" type="button" hidden>Riprova</button>
+  </section>
+
+  <noscript>
+    <p class="notice notice-static">Per vedere la tavola serve JavaScript.</p>
+  </noscript>
+
+  <script src="../config.js"></script>
+  <script src="../plankton.js"></script>
+  <script src="tavola.js"></script>
+</body>
+</html>
