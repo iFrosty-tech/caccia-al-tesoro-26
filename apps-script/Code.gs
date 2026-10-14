@@ -12,6 +12,7 @@
  *   { action: "getMyAnswers", username, token }
  *   { action: "saveAnswer",   username, token, puzzleId, answer }
  *   { action: "getPuzzleKey", username, token, puzzleId }
+ *   { action: "getAssetKey",  username, token, assetId }
  *
  * Timed riddles (TIMED_PUZZLES) ship their media encrypted in the public repo. The AES key
  * lives only in Script Properties (Project Settings -> Script properties, e.g. MEDIA_KEY_p2):
@@ -22,6 +23,10 @@
  * riddle's checkbox in the Unlocks sheet (column B of its row). A missing sheet or row, or an
  * unticked box, keeps the riddle locked. getMyAnswers lists the flag riddles still locked, so
  * the index can show them closed.
+ *
+ * Open assets (OPEN_ASSETS) are encrypted files that are not riddles, such as the image of a
+ * hidden page: getAssetKey hands their key to any logged-in player, with no time or flag gate.
+ * They have their own allow-list, apart from the riddle gates: getPuzzleKey never returns their key.
  *
  * There is intentionally no endpoint that lists other players' data.
  * Passwords are stored in plain text on purpose: secrecy is not a goal and the
@@ -51,6 +56,11 @@ var FLAG_PUZZLES = {
   p3: { keyProperty: 'MEDIA_KEY_p3' }
 };
 var UNLOCKS_SHEET = 'Unlocks';
+
+// Encrypted files open to every logged-in player; the key is in Script Properties.
+var OPEN_ASSETS = {
+  tavola: { keyProperty: 'MEDIA_KEY_tavola' }
+};
 var UNLOCKS_HEADERS = ['puzzleId', 'unlocked'];
 
 /** Error whose message is safe to show to the player. */
@@ -79,6 +89,9 @@ function doPost(e) {
         break;
       case 'getPuzzleKey':
         result = getPuzzleKey(req);
+        break;
+      case 'getAssetKey':
+        result = getAssetKey(req);
         break;
       default:
         throw new UserError('Azione non valida.');
@@ -213,6 +226,27 @@ function puzzleKeyResponse(puzzleId, now, readProperty, readFlags) {
     throw new UserError('Il video non è ancora pronto, riprova tra poco.', 'NOT_CONFIGURED');
   }
   return { ok: true, locked: false, key: String(key).trim() };
+}
+
+/** Returns the media key of an open asset to any logged-in player. */
+function getAssetKey(req) {
+  authenticate(req);
+  var assetId = typeof req.assetId === 'string' ? req.assetId.trim() : '';
+  return assetKeyResponse(assetId, function (name) {
+    return PropertiesService.getScriptProperties().getProperty(name);
+  });
+}
+
+/** Pure core of getAssetKey: the property reader is injected for tests. */
+function assetKeyResponse(assetId, readProperty) {
+  if (!PUZZLE_ID_PATTERN.test(assetId) || !Object.prototype.hasOwnProperty.call(OPEN_ASSETS, assetId)) {
+    throw new UserError('Contenuto non valido.');
+  }
+  var key = readProperty(OPEN_ASSETS[assetId].keyProperty);
+  if (!key || !String(key).trim()) {
+    throw new UserError('Il contenuto non è ancora pronto, riprova tra poco.', 'NOT_CONFIGURED');
+  }
+  return { ok: true, key: String(key).trim() };
 }
 
 /**

@@ -138,6 +138,26 @@ Il foglio **`Unlocks`** ha due colonne, `puzzleId` e `unlocked`: una riga per en
 
 Prima di spuntare, controlla che la proprietà `MEDIA_KEY_p3` ci sia: senza, i giocatori vedono "Il video non è ancora pronto".
 
+### Pagina nascosta `/tavola/` (immagine cifrata)
+
+La pagina [`tavola/`](tavola/index.html) mostra un'immagine solo a chi ha fatto l'accesso al sito; non è collegata da nessuna parte e chiede ai motori di ricerca di non indicizzarla (`noindex`). Chi non ha una sessione vede un invito ad accedere dalla pagina principale.
+
+L'immagine è pubblicata **solo cifrata** (`tavola/tavola.enc`) e la pagina la disegna su un `<canvas>` con il nome del giocatore in filigrana: niente "Salva immagine", niente trascinamento, e l'immagine si nasconde quando la pagina perde il focus. Sono solo deterrenti: uno screenshot resta sempre possibile.
+
+Il backend consegna la chiave con l'azione `getAssetKey` a qualunque giocatore loggato (nessun orario né spunta). Gli id ammessi sono in `OPEN_ASSETS` in `Code.gs`, separati dagli enigmi: `getPuzzleKey` non consegna mai queste chiavi.
+
+Per sostituire l'immagine (o cambiare chiave):
+
+1. Convertila in WebP (qualità 80 basta, il file resta sotto il MB) e cifrala con una chiave nuova, partendo da un file fuori dal repo:
+
+   ```sh
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/tavola.webp" tavola/tavola.enc
+   ```
+
+2. In Apps Script aggiorna la proprietà dello script `MEDIA_KEY_tavola` con la chiave stampata.
+3. Se hai cambiato `Code.gs`, ripubblica come **nuova versione dello stesso deployment** (sezione 5); cambiare solo la proprietà non richiede un nuovo deployment.
+4. Fai push di `tavola/tavola.enc`. Finché file e chiave non coincidono, i giocatori vedono un messaggio di errore: aggiorna i due insieme.
+
 ## 4. Vedere le risposte
 
 Apri il Google Sheet, foglio **`Answers`**: una riga per giocatore ed enigma (`username`, `puzzleId`, `answer`, `updatedAt`). Ogni modifica aggiorna la stessa riga.
