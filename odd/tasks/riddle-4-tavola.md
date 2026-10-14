@@ -19,7 +19,7 @@ Riddle 4 hinges on an image players reach through a clue URL. It must not be ind
 - [x] T1 Asset: WebP q80 + encrypt to `tavola/tavola.enc`; key saved outside repo (inline).
 - [x] T2 Server: `getAssetKey` + `OPEN_ASSETS` in `apps-script/Code.gs`; README section (delegated).
 - [x] T3 Page: `tavola/index.html`, `tavola/tavola.js`, `tavola/tavola.css` with protections (delegated).
-- [ ] T4 Deploy: user sets `MEDIA_KEY_tavola`, clasp push + deploy same id, merge/push (user-authorized).
+- [x] T4 Deploy: user sets `MEDIA_KEY_tavola`, clasp push + deploy same id, merge/push (user-authorized).
 
 ## Acceptance criteria
 - Logged-out visit shows a message and link back to the site login; no key request.
@@ -53,5 +53,7 @@ ask-on-risk. Forecast ~350 authored lines, single PR.
 
 - Review (RDD on, medium: executable change in Code.gs; consent granted): lineage review-86bf1c23d4fd3381, reliability lens, approved + acknowledged. Advisory WARNING R3-unfocused-initial-reveal (image drawn while window unfocused at load) and SUGGESTION R3-print-no-unveil fixed in follow-up commit (hasFocus check, afterprint unveil). SUGGESTION R3-no-committed-tests left as later work (no test runner).
 
+- T4: route inline (user-authorized). User set MEDIA_KEY_tavola; `clasp push -f` + `clasp deploy -i <same id>` -> @6. Live smoke: getAssetKey with fake token -> AUTH (action recognized). Merged to main and pushed.
+
 ## Next step
-T4: user sets `MEDIA_KEY_tavola`, clasp push + redeploy same deployment id, manual browser check (login/logged-out/blur/watermark/pinch-zoom), then merge/push.
+Manual browser check on Pages (logged out, logged in, blur veil, watermark, pinch-zoom). Rename /tavola/ when the final clue URL is chosen.
