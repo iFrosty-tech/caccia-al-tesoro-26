@@ -51,5 +51,7 @@ ask-on-risk. Forecast ~350 authored lines, single PR.
   - Test-first exception: no test runner in the repo, so no RED/GREEN; checks above plus manual browser check after deploy (T4).
   - Known limit: needs `createImageBitmap` (Safari 15+); older browsers get a "Browser non adatto" message instead of an image element fallback.
 
+- Review (RDD on, medium: executable change in Code.gs; consent granted): lineage review-86bf1c23d4fd3381, reliability lens, approved + acknowledged. Advisory WARNING R3-unfocused-initial-reveal (image drawn while window unfocused at load) and SUGGESTION R3-print-no-unveil fixed in follow-up commit (hasFocus check, afterprint unveil). SUGGESTION R3-no-committed-tests left as later work (no test runner).
+
 ## Next step
 T4: user sets `MEDIA_KEY_tavola`, clasp push + redeploy same deployment id, manual browser check (login/logged-out/blur/watermark/pinch-zoom), then merge/push.

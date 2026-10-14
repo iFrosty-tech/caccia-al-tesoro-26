@@ -273,6 +273,7 @@
     window.addEventListener("pagehide", veil);
     window.addEventListener("pageshow", unveil);
     window.addEventListener("beforeprint", veil);
+    window.addEventListener("afterprint", unveil);
     document.addEventListener("visibilitychange", () => (document.hidden ? veil() : unveil()));
     window.addEventListener("resize", scheduleDraw);
     window.addEventListener("orientationchange", scheduleDraw);
@@ -355,8 +356,9 @@
     els.board.hidden = false;
     hideNotice();
     draw();
-    // A page opened in the background starts veiled until the player looks at it.
-    if (document.hidden) veil();
+    // A page opened in the background or unfocused (or blurred while fonts loaded)
+    // starts veiled until the player looks at it.
+    if (document.hidden || !document.hasFocus()) veil();
   }
 
   guardPage();
