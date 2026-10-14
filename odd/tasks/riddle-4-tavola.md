@@ -17,8 +17,8 @@ Riddle 4 hinges on an image players reach through a clue URL. It must not be ind
 
 ## Tasks
 - [x] T1 Asset: WebP q80 + encrypt to `tavola/tavola.enc`; key saved outside repo (inline).
-- [ ] T2 Server: `getAssetKey` + `OPEN_ASSETS` in `apps-script/Code.gs`; README section (delegated).
-- [ ] T3 Page: `tavola/index.html`, `tavola/tavola.js`, `tavola/tavola.css` with protections (delegated).
+- [x] T2 Server: `getAssetKey` + `OPEN_ASSETS` in `apps-script/Code.gs`; README section (delegated).
+- [x] T3 Page: `tavola/index.html`, `tavola/tavola.js`, `tavola/tavola.css` with protections (delegated).
 - [ ] T4 Deploy: user sets `MEDIA_KEY_tavola`, clasp push + deploy same id, merge/push (user-authorized).
 
 ## Acceptance criteria
@@ -36,6 +36,20 @@ ask-on-risk. Forecast ~350 authored lines, single PR.
 
 ## Progress / evidence
 - T1: route inline (mechanical). `tavola.enc` 807876 bytes.
+- T2: route delegated (one writer for T2+T3, 2+ non-trivial files). Commit `5e42f35` feat(server): add getAssetKey for open encrypted assets.
+  - `getAssetKey` authenticates, then `assetKeyResponse` (pure core) checks `PUZZLE_ID_PATTERN` + `OPEN_ASSETS`, reads the property, `NOT_CONFIGURED` when empty. Not routed through `puzzleGate`; `getPuzzleKey`/`saveAnswer` untouched.
+  - `node --check` on a scratchpad copy of `Code.gs`: OK.
+  - Node vm smoke of `assetKeyResponse`: `tavola` -> `{ok:true,key}` (trimmed); empty property -> NOT_CONFIGURED; `p3` and `../x` -> BAD_REQUEST "Contenuto non valido."; `puzzleGate('tavola')` -> null, so `getPuzzleKey` refuses it.
+  - Note: `saveAnswer` already accepts any pattern-valid id that is not gated (pre-existing, unchanged); docs state only that `getPuzzleKey` never hands out asset keys.
+  - README: new subsection "Pagina nascosta `/tavola/`" under section 3 (rotate: encrypt -> `MEDIA_KEY_tavola` -> push, redeploy only if `Code.gs` changed).
+- T3: route delegated (same writer). Commit `5f1c013` feat(tavola): add hidden login-only page for the riddle 4 image.
+  - `node --check tavola/tavola.js`: OK.
+  - `rg -n "<img|createObjectURL" tavola/`: no matches (exit 1).
+  - Mocked-DOM Node harness (real AES-GCM via webcrypto): logged out -> no key request, login link; AUTH -> session cleared, "Sessione scaduta" + link; NOT_CONFIGURED and wrong key -> Italian error + retry; valid key -> bitmap from `image/webp` Blob, canvas 1504x1128 backing for 376 CSS px (dpr 3, up to 4x for pinch-zoom), watermark drawn.
+  - Impeccable detector: `[]`, but DEGRADED (regex fallback, no contrast evaluation).
+  - Size: 646 added lines, over the ~400 advisory heuristic: CSS mirrors site tokens/loader and JS duplicates the app's session/API/decrypt helpers (app.js is a closed IIFE).
+  - Test-first exception: no test runner in the repo, so no RED/GREEN; checks above plus manual browser check after deploy (T4).
+  - Known limit: needs `createImageBitmap` (Safari 15+); older browsers get a "Browser non adatto" message instead of an image element fallback.
 
 ## Next step
-T2+T3 via one delegated writer.
+T4: user sets `MEDIA_KEY_tavola`, clasp push + redeploy same deployment id, manual browser check (login/logged-out/blur/watermark/pinch-zoom), then merge/push.
