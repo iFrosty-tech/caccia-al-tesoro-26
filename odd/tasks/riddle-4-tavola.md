@@ -10,7 +10,7 @@ Riddle 4 hinges on an image players reach through a clue URL. It must not be ind
 - Standalone page `tavola/index.html`, `noindex, nofollow, noimageindex`, not linked from the app. Path is provisional (user will rename later).
 - Login required (reuses `localStorage` session `caccia-al-tesoro-session`); no flag or time gate.
 - Image ships only as `tavola/tavola.enc` (AES-GCM, `tools/encrypt-media.mjs`); key lives in Script Property `MEDIA_KEY_tavola`, never in the repo.
-- Server: new `getAssetKey` action with its own allow-list (`OPEN_ASSETS`), so `saveAnswer` never accepts the asset id.
+- Server: new `getAssetKey` action with its own allow-list (`OPEN_ASSETS`), so `getPuzzleKey` never hands out the asset key (`saveAnswer` keeps its pre-existing behavior).
 - Client renders on `<canvas>` (no `<img>`/blob URL), blocks context menu/drag/long-press/select, watermarks the player name, hides the image on blur/visibilitychange.
 - Not achievable on the web: blocking OS screenshots or screen recording. Only deterrents.
 - Source PNG 6.3 MB -> WebP q80 (808 KB). Lossy: any hidden pixel-level data in the PNG would not survive.
