@@ -16,7 +16,7 @@ Riddle 4 follows the riddle-3 release model (manual signal during the event). Th
 
 ## Tasks
 - [x] T1 — Rename `/tavola/` -> `/periodica/` (route: inline; mechanical folder move + README paths, no trigger fired)
-- [ ] T2 — p4 flag gate in `Code.gs`, `puzzles.json` p4, MSE playback with blob fallback, anti-download/inspect deterrents, README organizer steps (route: delegated writer; triggers: writer — Code.gs, app.js, puzzles.json, README non-trivial; preparation — reading app.js/Code.gs)
+- [x] T2 — p4 flag gate in `Code.gs`, `puzzles.json` p4, MSE playback with blob fallback, anti-download/inspect deterrents, README organizer steps (route: delegated writer; triggers: writer — Code.gs, app.js, puzzles.json, README non-trivial; preparation — reading app.js/Code.gs)
 - [ ] T3 — Riddle-4 page theme matching the video, via the impeccable skill (route: delegated UI writer; triggers: preparation + writer — style.css, plankton.js, app.js)
 
 ## Acceptance criteria
@@ -31,6 +31,14 @@ ask-on-risk (forecast ~400-600 authored lines, binary excluded)
 
 ## Progress / evidence
 - T1: `git mv tavola periodica`; README paths updated; `rg "tavola/" README.md` shows only `periodica/...` paths.
+- T2 (delegated writer): `Code.gs` `FLAG_PUZZLES.p4` (`MEDIA_KEY_p4`) + header note; `puzzles.json` p4 with `gate: "flag"`, `protect: true`, `videoType: 'video/mp4; codecs="avc1.640032, mp4a.40.2"'` (no `theme` yet: T3 adds the name to `THEMES` in app.js, a `body[data-theme]` block in style.css and `"theme"` on p4). app.js: `createStream` (MSE / ManagedMediaSource; fMP4 fragment index from moov/moof/tfdt/trun, ~2 MB chunks, `updateend` pump, QuotaExceededError -> evict behind playhead or a detached range ahead, else wait for timeupdate; refills evicted chunks; `endOfStream`; duration set from the fragments; MediaSource URL revoked on `sourceopen`; bytes dropped once all fits unless ManagedMediaSource; blob fallback if MSE is missing/unsupported or does not open in 10 s); `guardRiddlePage` (F12, Ctrl/Cmd+Shift/Option+I/J/C, Ctrl/Cmd+U/S/P blocked; devtools gap > 160 px on resize + 1 s poll, skipped on coarse pointer / no hover; cover + pause while devtools open or page hidden/printing; contextmenu/dragstart/selectstart blocked on the player; username watermark as SVG tile; all page listeners removed on leave); `renderVideoPlayer(src, title, protect)` sets controlslist/disablePictureInPicture/disableRemotePlayback/x-webkit-airplay before the source; wake also listens to `durationchange`. style.css: `.is-protected`, `.video-watermark`, `.video-guard`, `.is-guarded`. README: Enigma 4 organizer steps + honest limits. ~+600 lines, above the ~400 heuristic because the fragment index and eviction-aware feeder are needed for MSE on quota-limited browsers.
+- T2 evidence (test-first exception: no runner; scripts in the session scratchpad `t2/`):
+  - `node --check app.js`: OK. `JSON.parse(puzzles.json)`: OK.
+  - `gs-test.js` (Code.gs in node:vm, stubbed services): 23 passed, 0 failed (p4 locked without sheet/row/tick, `saveAnswer` LOCKED, key only when ticked, VERO text, NOT_CONFIGURED without property, p3 unchanged, `setupUnlocks` adds p4 and keeps p3 tick, idempotent, `getAssetKey` refuses p4).
+  - `roundtrip.mjs`: MATCH (enc 69,585,074 B -> plain 69,585,046 B).
+  - `cdp-p4.mjs` headless Chrome, stubbed backend, real key and file: `mse` 28/0 (only a MediaSource object URL, no video Blob URL, src not fetchable, readyState >= 2, duration ~271.97 s, one buffered range 0-272 s and `ended` state, play + seek 200 s, contextmenu/drag/select prevented on the player only, shortcuts prevented, Ctrl+C untouched, devtools gap pauses + Italian cover, play while covered stops, hidden page pauses + covers, no overflow at 320 px, leave: shortcuts free, MediaSource closed, every object URL revoked, p3 page unaffected); `quota` (appendBuffer capped at 60 s buffered) 29/0 incl. seek back refill and play to `ended`; `nomse` (MediaSource removed) 25/0 with blob fallback.
+  - Key scan (node walker, hidden + binary files, .git excluded): prefix-8 hits 0, full key 0, git diff 0.
+  - Not verified: real iPhone (ManagedMediaSource `startstreaming`/`endstreaming`, native fullscreen hides the watermark), real Android quota, real devtools docking/zoom false positives.
 
 ## Next step
-T2 delegated writer.
+T3 delegated UI writer (impeccable).

@@ -20,5 +20,14 @@
     "download": { "file": "audio/enigma-3.enc", "name": "enigma-3.wav", "type": "audio/wav" },
     "gate": "flag",
     "theme": "green"
+  },
+  {
+    "id": "p4",
+    "title": "Enigma 4",
+    "text": "La soluzione al quarto enigma è:",
+    "video": "video/enigma-4.enc",
+    "videoType": "video/mp4; codecs=\"avc1.640032, mp4a.40.2\"",
+    "protect": true,
+    "gate": "flag"
   }
 ]

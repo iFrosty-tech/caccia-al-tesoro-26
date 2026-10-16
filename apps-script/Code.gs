@@ -22,7 +22,8 @@
  * Flag riddles (FLAG_PUZZLES) work the same way, but open when the organizer ticks the
  * riddle's checkbox in the Unlocks sheet (column B of its row). A missing sheet or row, or an
  * unticked box, keeps the riddle locked. getMyAnswers lists the flag riddles still locked, so
- * the index can show them closed.
+ * the index can show them closed. A new flag riddle needs its MEDIA_KEY_<id> property, a new
+ * version of the deployment and one more run of setupUnlocks() to add its row.
  *
  * Open assets (OPEN_ASSETS) are encrypted files that are not riddles, such as the image of a
  * hidden page: getAssetKey hands their key to any logged-in player, with no time or flag gate.
@@ -53,7 +54,8 @@ var TIMED_PUZZLES = {
 
 // Riddles released by the organizer's tick in the Unlocks sheet; the key is in Script Properties.
 var FLAG_PUZZLES = {
-  p3: { keyProperty: 'MEDIA_KEY_p3' }
+  p3: { keyProperty: 'MEDIA_KEY_p3' },
+  p4: { keyProperty: 'MEDIA_KEY_p4' }
 };
 var UNLOCKS_SHEET = 'Unlocks';
 

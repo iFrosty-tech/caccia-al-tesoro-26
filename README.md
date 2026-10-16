@@ -138,6 +138,32 @@ Il foglio **`Unlocks`** ha due colonne, `puzzleId` e `unlocked`: una riga per en
 
 Prima di spuntare, controlla che la proprietà `MEDIA_KEY_p3` ci sia: senza, i giocatori vedono "Il video non è ancora pronto".
 
+### Enigma 4 (video a segnale protetto)
+
+L'enigma 4 funziona come l'enigma 3 (sigillato finché non spunti la sua casella), ma il video è riprodotto in modo protetto. Il file `video/enigma-4.enc` è già cifrato nel repository; la chiave **non** c'è e va solo nelle proprietà dello script.
+
+1. In Apps Script aggiungi la proprietà dello script `MEDIA_KEY_p4` con la chiave dell'enigma 4.
+2. `Code.gs` ha già `p4` in `FLAG_PUZZLES`: copia il file aggiornato nell'editor e ripubblica come **nuova versione dello stesso deployment** (sezione 5).
+3. Nell'editor Apps Script esegui di nuovo **`setupUnlocks`**: aggiunge la riga `p4` con la casella **non spuntata** (le righe esistenti, come `p3`, e le loro spunte restano come sono).
+4. Fai push di `video/enigma-4.enc` e di `puzzles.json`. Quando vuoi aprire l'enigma, spunta la casella `unlocked` della riga `p4` nel foglio **`Unlocks`**.
+
+In [`puzzles.json`](puzzles.json) la protezione si attiva con due campi:
+
+```json
+{
+  "id": "p4", "title": "Enigma 4", "text": "Testo dell'enigma",
+  "video": "video/enigma-4.enc",
+  "videoType": "video/mp4; codecs=\"avc1.640032, mp4a.40.2\"",
+  "protect": true,
+  "gate": "flag"
+}
+```
+
+- `protect: true` attiva i deterrenti sulla sola pagina dell'enigma: niente menu del tasto destro, trascinamento o selezione sul video; download, picture-in-picture e trasmissione ad altri dispositivi disattivati; scorciatoie per gli strumenti per sviluppatori, salva, stampa e sorgente bloccate; il nome del giocatore in filigrana sul video; il video si mette in pausa e si copre quando la pagina va in secondo piano o (su computer) quando gli strumenti per sviluppatori sembrano aperti.
+- `videoType` permette di riprodurre il video con Media Source Extensions, senza un indirizzo `blob:` del file intero da aprire o salvare. Il file deve essere un **MP4 frammentato** (per esempio `ffmpeg -i in.mp4 -c copy -movflags frag_keyframe+empty_moov+default_base_moof out.mp4`, poi cifrato con `tools/encrypt-media.mjs`) e i codec in `videoType` devono corrispondere a quelli del file. I browser senza Media Source Extensions (per esempio iPhone con iOS precedente al 17.1) riproducono il video nel modo normale.
+
+> **Limiti, onestamente:** sono solo deterrenti. Per riprodurre un video il browser deve decifrarlo, quindi un giocatore determinato può comunque registrare lo schermo, fotografarlo, o prendere chiave e file cifrato dalla scheda Rete degli strumenti per sviluppatori. Il controllo degli strumenti per sviluppatori è una stima (finestra e pagina di dimensioni diverse): uno zoom del browser diverso dal 100% può farlo scattare, e non funziona se gli strumenti sono aperti in una finestra separata. Su iPhone, a schermo intero, il video passa al lettore di sistema e la filigrana non si vede.
+
 ### Pagina nascosta `/periodica/` (immagine cifrata)
 
 La pagina [`periodica/`](periodica/index.html) mostra un'immagine solo a chi ha fatto l'accesso al sito; non è collegata da nessuna parte e chiede ai motori di ricerca di non indicizzarla (`noindex`). Chi non ha una sessione vede un invito ad accedere dalla pagina principale.

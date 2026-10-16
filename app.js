@@ -408,13 +408,16 @@
       seekTo(media.currentTime + direction * SEEK_STEP);
     });
 
-    media.addEventListener("loadedmetadata", () => {
+    // A streamed video may learn (or correct) its duration after the metadata.
+    function onDuration() {
       if (!Number.isFinite(media.duration)) return;
       seek.max = String(Math.floor(media.duration));
       seek.disabled = false;
       total.textContent = formatTime(media.duration);
       showPosition(media.currentTime);
-    });
+    }
+    media.addEventListener("loadedmetadata", onDuration);
+    media.addEventListener("durationchange", onDuration);
 
     media.addEventListener("timeupdate", () => {
       if (!scrubbing) showPosition(media.currentTime);
@@ -528,8 +531,9 @@
   }
 
   // The audio player's twin over a <video>: a veil and a big orb rest on the picture while it
-  // is still, the orb and wake sit below it (over it in fullscreen).
-  function renderVideoPlayer(src, title) {
+  // is still, the orb and wake sit below it (over it in fullscreen). `protect`: a riddle that
+  // asks for the deterrents ("protect": true) also turns off download, PiP and casting.
+  function renderVideoPlayer(src, title, protect) {
     const player = document.createElement("div");
     player.className = "video-player";
     player.setAttribute("role", "group");
@@ -541,6 +545,16 @@
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.preload = "auto";
+    if (protect) {
+      // Before the source: a ManagedMediaSource (iPhone) only opens with remote playback off.
+      player.classList.add("is-protected");
+      video.disableRemotePlayback = true;
+      video.setAttribute("disableremoteplayback", "");
+      video.disablePictureInPicture = true;
+      video.setAttribute("disablepictureinpicture", "");
+      video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+      video.setAttribute("x-webkit-airplay", "deny");
+    }
     video.src = src;
     tracks.add(video);
 
@@ -752,6 +766,463 @@
     });
 
     return player;
+  }
+
+  // ---------- Protected riddles: streamed playback and deterrents ----------
+
+  // "protect": true in puzzles.json. With "videoType" (an MSE type with codecs) the decrypted
+  // video is fed to Media Source Extensions, so no URL of the whole file ever exists; the page
+  // also guards itself while it is open. A browser that plays a video must decrypt it, so these
+  // are deterrents only: a screen recording, or the key and the file from the network, still work.
+  const CHUNK_BYTES = 2 * 1048576; // bytes per append: whole fragments up to about this size
+  const KEEP_BEHIND = 10; // seconds kept behind the playhead when the buffer is full
+  const OPEN_TIMEOUT = 10000; // ms for the MediaSource to open before falling back to a blob
+  const MAX_TRIES = 3; // appends of one chunk that never shows up in the buffer before skipping it
+  const DEVTOOLS_GAP = 160; // px of window frame beyond which docked devtools are assumed
+  const DEVTOOLS_POLL = 1000; // ms between devtools checks (undocking does not resize the page)
+
+  function isProtected(puzzle) {
+    return puzzle.protect === true;
+  }
+
+  // Top-level boxes of an MP4 between two offsets: [{ type, start, body, end }], or null if broken.
+  function mp4Boxes(view, from, to) {
+    const boxes = [];
+    let at = from;
+    while (at + 8 <= to) {
+      let size = view.getUint32(at);
+      let body = at + 8;
+      if (size === 1) {
+        size = view.getUint32(at + 8) * 4294967296 + view.getUint32(at + 12);
+        body = at + 16;
+      } else if (size === 0) {
+        size = to - at;
+      }
+      if (size < body - at || at + size > to) return null;
+      let type = "";
+      for (let i = 4; i < 8; i++) type += String.fromCharCode(view.getUint8(at + i));
+      boxes.push({ type: type, start: at, body: body, end: at + size });
+      at += size;
+    }
+    return boxes;
+  }
+
+  function childBoxes(view, box, type) {
+    return (mp4Boxes(view, box.body, box.end) || []).filter((child) => child.type === type);
+  }
+
+  function childBox(view, box, type) {
+    return childBoxes(view, box, type)[0] || null;
+  }
+
+  // Ticks covered by one track run: per-sample durations, or the track's default for each sample.
+  function runTicks(view, trun, defaultDuration) {
+    const flags = view.getUint32(trun.body) & 0xffffff;
+    const count = view.getUint32(trun.body + 4);
+    if (!(flags & 0x100)) return count * defaultDuration;
+    let at = trun.body + 8 + (flags & 0x1 ? 4 : 0) + (flags & 0x4 ? 4 : 0);
+    const stride = 4 * [0x100, 0x200, 0x400, 0x800].filter((bit) => flags & bit).length;
+    let ticks = 0;
+    for (let i = 0; i < count; i++, at += stride) ticks += view.getUint32(at);
+    return ticks;
+  }
+
+  // { start, end } in seconds of one moof, across its tracks.
+  function fragmentSpan(view, moof, tracks) {
+    let start = Infinity;
+    let end = 0;
+    childBoxes(view, moof, "traf").forEach((traf) => {
+      const tfhd = childBox(view, traf, "tfhd");
+      const tfdt = childBox(view, traf, "tfdt");
+      const track = tfhd && tracks[view.getUint32(tfhd.body + 4)];
+      if (!track || !tfdt) return;
+      const flags = view.getUint32(tfhd.body) & 0xffffff;
+      const at = tfhd.body + 8 + (flags & 0x1 ? 8 : 0) + (flags & 0x2 ? 4 : 0);
+      const defaultDuration = flags & 0x8 ? view.getUint32(at) : track.defaultDuration;
+      const base =
+        view.getUint8(tfdt.body) === 1
+          ? view.getUint32(tfdt.body + 4) * 4294967296 + view.getUint32(tfdt.body + 8)
+          : view.getUint32(tfdt.body + 4);
+      let ticks = 0;
+      childBoxes(view, traf, "trun").forEach((trun) => {
+        ticks += runTicks(view, trun, defaultDuration);
+      });
+      start = Math.min(start, base / track.scale);
+      end = Math.max(end, (base + ticks) / track.scale);
+    });
+    return Number.isFinite(start) && end > start ? { start: start, end: end } : null;
+  }
+
+  // A fragmented MP4 (ftyp + moov, then moof + mdat pairs) as { initEnd, chunks, duration }:
+  // chunks group whole fragments with their byte range and time span, so they can be appended
+  // in any order and appended again after the browser evicts them. null if it is not one.
+  function indexFragments(buffer) {
+    try {
+      const view = new DataView(buffer);
+      const top = mp4Boxes(view, 0, view.byteLength);
+      const moov = top && top.find((box) => box.type === "moov");
+      if (!moov) return null;
+      const tracks = {};
+      childBoxes(view, moov, "trak").forEach((trak) => {
+        const tkhd = childBox(view, trak, "tkhd");
+        const mdia = childBox(view, trak, "mdia");
+        const mdhd = mdia && childBox(view, mdia, "mdhd");
+        if (!tkhd || !mdhd) return;
+        const id = view.getUint32(tkhd.body + (view.getUint8(tkhd.body) === 1 ? 20 : 12));
+        const scale = view.getUint32(mdhd.body + (view.getUint8(mdhd.body) === 1 ? 20 : 12));
+        if (scale > 0) tracks[id] = { scale: scale, defaultDuration: 0 };
+      });
+      const mvex = childBox(view, moov, "mvex");
+      if (mvex) {
+        childBoxes(view, mvex, "trex").forEach((trex) => {
+          const track = tracks[view.getUint32(trex.body + 4)];
+          if (track) track.defaultDuration = view.getUint32(trex.body + 12);
+        });
+      }
+      const chunks = [];
+      for (let i = 0; i < top.length; i++) {
+        if (top[i].type !== "moof") continue;
+        const mdat = top[i + 1];
+        const span = fragmentSpan(view, top[i], tracks);
+        if (!mdat || mdat.type !== "mdat" || !span) return null;
+        const last = chunks[chunks.length - 1];
+        if (last && last.to === top[i].start && mdat.end - last.from <= CHUNK_BYTES) {
+          last.to = mdat.end;
+          last.end = Math.max(last.end, span.end);
+        } else {
+          chunks.push({ from: top[i].start, to: mdat.end, start: span.start, end: span.end });
+        }
+      }
+      if (chunks.length === 0 || moov.end > chunks[0].from) return null;
+      return {
+        initEnd: moov.end,
+        chunks: chunks,
+        duration: Math.max.apply(null, chunks.map((chunk) => chunk.end)),
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Plays decrypted bytes through Media Source Extensions: the video's source is a MediaSource
+  // (revoked as soon as it opens), fed chunk by chunk, never a URL of the file. null when this
+  // browser or this file cannot. `onFail(bytes)` hands the bytes back if MSE gives up before the
+  // first append, for the blob fallback. ManagedMediaSource (iPhone) may evict data whenever it
+  // likes, so its bytes stay for the life of the page; elsewhere they go once everything fits.
+  function createStream(bytes, type, onFail) {
+    const Source = window.ManagedMediaSource || window.MediaSource;
+    if (!Source || typeof Source.isTypeSupported !== "function" || !Source.isTypeSupported(type)) return null;
+    const index = indexFragments(bytes);
+    if (!index) return null;
+    const managed = Source === window.ManagedMediaSource;
+    let source;
+    try {
+      source = new Source();
+    } catch (_) {
+      return null;
+    }
+    const url = URL.createObjectURL(source);
+    const chunks = index.chunks;
+    const appended = chunks.map(() => false);
+    const tries = chunks.map(() => 0);
+    let video = null;
+    let buffer = null;
+    let started = false; // the first append went through: no more fallback
+    let streaming = true; // ManagedMediaSource says when it wants data
+    let waitRoom = false; // the buffer is full ahead of the playhead
+    let quotaHit = false; // the browser cannot hold the whole file
+    let closed = false;
+    let openTimer = 0;
+
+    function stop() {
+      if (closed) return;
+      closed = true;
+      clearTimeout(openTimer);
+      bytes = null;
+      URL.revokeObjectURL(url);
+    }
+
+    function fail() {
+      if (closed || started) return;
+      const rest = bytes;
+      stop();
+      onFail(rest);
+    }
+
+    function isBuffered(time) {
+      const ranges = buffer.buffered;
+      for (let i = 0; i < ranges.length; i++) {
+        if (ranges.start(i) <= time && time < ranges.end(i)) return true;
+      }
+      return false;
+    }
+
+    function chunkAt(time) {
+      let found = 0;
+      chunks.forEach((chunk, i) => {
+        if (chunk.start <= time + 0.05) found = i;
+      });
+      return found;
+    }
+
+    // The first missing chunk from the playhead on (evicted ones count as missing again); then,
+    // if the whole file fits, the ones behind it.
+    function nextChunk() {
+      chunks.forEach((chunk, i) => {
+        if (!appended[i]) return;
+        if (isBuffered((chunk.start + chunk.end) / 2)) tries[i] = 0;
+        else if (tries[i] < MAX_TRIES) appended[i] = false;
+      });
+      const here = chunkAt(video.currentTime);
+      for (let i = here; i < chunks.length; i++) if (!appended[i]) return i;
+      if (managed || quotaHit) return -1;
+      for (let i = 0; i < here; i++) if (!appended[i]) return i;
+      return -1;
+    }
+
+    // Full: drop what is well behind the playhead, else a stretch ahead that the playhead is not
+    // in (left there before a seek back), else wait for the playhead to move on.
+    function makeRoom() {
+      quotaHit = true;
+      const now = video.currentTime;
+      const ranges = buffer.buffered;
+      let from = -1;
+      let to = -1;
+      if (ranges.length > 0 && ranges.start(0) < now - KEEP_BEHIND) {
+        from = 0;
+        to = now - KEEP_BEHIND;
+      } else if (ranges.length > 0 && ranges.start(ranges.length - 1) > now + 1) {
+        from = ranges.start(ranges.length - 1);
+        to = ranges.end(ranges.length - 1);
+      }
+      if (from >= 0) {
+        try {
+          buffer.remove(from, to);
+          return;
+        } catch (_) {
+          // Busy or detached: wait for the next timeupdate instead.
+        }
+      }
+      waitRoom = true;
+    }
+
+    function finish() {
+      if (source.readyState !== "open" || !appended[chunks.length - 1]) return;
+      try {
+        source.endOfStream();
+      } catch (_) {
+        return;
+      }
+      // Everything is in, and only an append makes these browsers evict: the bytes can go.
+      if (!managed && !quotaHit && appended.every(Boolean)) bytes = null;
+    }
+
+    function pump() {
+      if (closed || !bytes || !buffer || buffer.updating || !streaming || waitRoom) return;
+      const next = nextChunk();
+      if (next < 0) {
+        finish();
+        return;
+      }
+      const chunk = chunks[next];
+      try {
+        buffer.appendBuffer(new Uint8Array(bytes, chunk.from, chunk.to - chunk.from));
+        appended[next] = true;
+        tries[next]++;
+      } catch (err) {
+        if (err && err.name === "QuotaExceededError") makeRoom();
+        else stop(); // the element failed: its own error handler tells the player
+      }
+    }
+
+    function onOpen() {
+      if (closed) return;
+      clearTimeout(openTimer);
+      // Attached: the MediaSource URL is no longer needed, so nothing is left to open.
+      URL.revokeObjectURL(url);
+      try {
+        buffer = source.addSourceBuffer(type);
+      } catch (_) {
+        fail();
+        return;
+      }
+      // The init segment of a stream has no duration: the fragments say how long it is.
+      try {
+        source.duration = index.duration;
+      } catch (_) {
+        // Learned from the media instead.
+      }
+      buffer.addEventListener("updateend", () => {
+        started = true;
+        pump();
+      });
+      buffer.addEventListener("bufferedchange", pump); // ManagedSourceBuffer evicted something
+      try {
+        buffer.appendBuffer(new Uint8Array(bytes, 0, index.initEnd));
+      } catch (_) {
+        fail();
+      }
+    }
+
+    function start(element) {
+      video = element;
+      source.addEventListener("sourceopen", onOpen, { once: true });
+      if (managed) {
+        source.addEventListener("startstreaming", () => {
+          streaming = true;
+          pump();
+        });
+        source.addEventListener("endstreaming", () => {
+          streaming = false;
+        });
+      }
+      video.addEventListener("seeking", () => {
+        waitRoom = false;
+        pump();
+      });
+      video.addEventListener("timeupdate", () => {
+        if (!waitRoom) return;
+        waitRoom = false;
+        pump();
+      });
+      openTimer = setTimeout(fail, OPEN_TIMEOUT);
+    }
+
+    return { url: url, start: start, stop: stop };
+  }
+
+  // The player's name tiled across the picture: a recording still shows whose screen it was.
+  function videoWatermark(name) {
+    const mark = document.createElement("span");
+    mark.className = "video-watermark";
+    mark.setAttribute("aria-hidden", "true");
+    if (!name) return mark;
+    const text = name.replace(/[&<>"']/g, (char) => "&#" + char.charCodeAt(0) + ";");
+    const textWidth = name.length * 9.5;
+    const width = Math.round(textWidth + 90);
+    const height = Math.round(Math.max(110, textWidth / 2 + 60));
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
+      '<g transform="rotate(-30 ' + width / 2 + " " + height / 2 + ')" text-anchor="middle" ' +
+      'font-family="Figtree, system-ui, sans-serif" font-size="16" font-weight="600">' +
+      '<text x="' + (width / 2 + 1) + '" y="' + (height / 2 + 7) + '" fill="rgba(3,6,11,0.22)">' + text + "</text>" +
+      '<text x="' + width / 2 + '" y="' + (height / 2 + 6) + '" fill="rgba(233,254,255,0.2)">' + text + "</text>" +
+      "</g></svg>";
+    mark.style.backgroundImage = 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+    return mark;
+  }
+
+  // Deterrents for as long as a protected riddle's page is open: devtools and save/print/source
+  // shortcuts swallowed, a cover (and a pause) while devtools look open or the page is hidden,
+  // no context menu, dragging or selecting on the player, the player's name over the picture.
+  // `release()` removes every page-wide listener; the player's own go with its element.
+  function guardRiddlePage(username) {
+    const undo = [];
+    function listen(target, type, handler, options) {
+      target.addEventListener(type, handler, options);
+      undo.push(() => target.removeEventListener(type, handler, options));
+    }
+
+    const reasons = { devtools: false, hidden: document.hidden };
+    let player = null;
+    let video = null;
+
+    const cover = document.createElement("div");
+    cover.className = "video-guard";
+    cover.setAttribute("role", "status");
+    cover.hidden = true;
+    const coverTitle = document.createElement("p");
+    coverTitle.className = "video-guard-title";
+    const coverText = document.createElement("p");
+    coverText.className = "video-guard-text";
+    cover.append(coverTitle, coverText);
+    // The cover is not part of the picture: a tap on it must not start the video.
+    ["click", "pointerdown"].forEach((type) => cover.addEventListener(type, (event) => event.stopPropagation()));
+
+    function guarded() {
+      return reasons.devtools || reasons.hidden;
+    }
+
+    function render() {
+      if (!player) return;
+      const on = guarded();
+      player.classList.toggle("is-guarded", on);
+      cover.hidden = !on;
+      if (!on) return;
+      video.pause();
+      if (reasons.devtools) {
+        coverTitle.textContent = "Video nascosto";
+        coverText.textContent =
+          "Chiudi gli strumenti per sviluppatori (o riporta lo zoom al 100%) per continuare a guardare.";
+      } else {
+        coverTitle.textContent = "Video in pausa";
+        coverText.textContent = "Torna su questa pagina per continuare a guardare.";
+      }
+    }
+
+    function setReason(name, on) {
+      if (reasons[name] === on) return;
+      reasons[name] = on;
+      render();
+    }
+
+    // F12, Ctrl/Cmd+Shift+I/J/C (Cmd+Option on a Mac), Ctrl/Cmd+U, S and P.
+    function blockKeys(event) {
+      const code = event.code || "";
+      const letter = /^Key[A-Z]$/.test(code) ? code.slice(3) : String(event.key || "").toUpperCase();
+      const command = event.ctrlKey || event.metaKey;
+      const known = letter.length === 1;
+      const devtools =
+        event.key === "F12" || code === "F12" || (command && (event.shiftKey || event.altKey) && known && "IJC".indexOf(letter) >= 0);
+      const page = command && known && "USP".indexOf(letter) >= 0;
+      if (!devtools && !page) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    listen(document, "keydown", blockKeys, true);
+
+    // Docked devtools shrink the page inside the window. Phones and tablets are skipped: their
+    // toolbars and keyboards change the same sizes.
+    const touch =
+      typeof window.matchMedia === "function" &&
+      (window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches);
+    function checkDevtools() {
+      const gap = Math.max(window.outerWidth - window.innerWidth, window.outerHeight - window.innerHeight);
+      setReason("devtools", gap > DEVTOOLS_GAP);
+    }
+    if (!touch) {
+      listen(window, "resize", checkDevtools);
+      const poll = setInterval(checkDevtools, DEVTOOLS_POLL);
+      undo.push(() => clearInterval(poll));
+      checkDevtools();
+    }
+
+    listen(document, "visibilitychange", () => setReason("hidden", document.hidden));
+    listen(window, "pagehide", () => setReason("hidden", true));
+    listen(window, "pageshow", () => setReason("hidden", document.hidden));
+    listen(window, "beforeprint", () => setReason("hidden", true));
+    listen(window, "afterprint", () => setReason("hidden", document.hidden));
+
+    function attach(nextPlayer, nextVideo) {
+      player = nextPlayer;
+      video = nextVideo;
+      ["contextmenu", "dragstart", "selectstart"].forEach((type) =>
+        player.addEventListener(type, (event) => event.preventDefault())
+      );
+      // While covered, a play (a key, a stray tap, the system media controls) stops at once.
+      video.addEventListener("play", () => {
+        if (guarded()) video.pause();
+      });
+      video.after(videoWatermark(username));
+      player.querySelector(".video-frame").append(cover);
+      render();
+    }
+
+    function release() {
+      while (undo.length) undo.pop()();
+    }
+
+    return { attach: attach, release: release };
   }
 
   // ---------- Locked riddles: countdown or seal, then the encrypted video ----------
@@ -1022,8 +1493,8 @@
 
   // Locked riddle: a countdown (timed) or a seal (flag) until the server hands out the key, then
   // download, decrypt and play the video. `onReveal` shows the riddle text and the answer form
-  // once the riddle is open.
-  function renderLockedStage(puzzle, onReveal) {
+  // once the riddle is open. `guard`: the page guard of a protected riddle, or null.
+  function renderLockedStage(puzzle, onReveal, guard) {
     const viewId = game.viewId;
     const session = game.session;
     const id = String(puzzle.id);
@@ -1299,21 +1770,41 @@
       }
       if (!alive()) return;
       bytes = null;
+      loader.hidden = true;
 
+      // A protected riddle streams through MSE where it can; elsewhere (or if MSE gives up
+      // before playing) the whole file becomes a blob URL, as for the other riddles.
+      const type = optionalText(puzzle.videoType);
+      const stream = guard && type ? createStream(plain, type, playBlob) : null;
+      if (stream) {
+        onLeave(stream.stop);
+        mountVideo(stream.url);
+        stream.start(video);
+      } else {
+        mountVideo(blobUrl(plain));
+      }
+      plain = null;
+      openRiddle(keyBase64);
+    }
+
+    function blobUrl(plain) {
       const objectUrl = URL.createObjectURL(new Blob([plain], { type: "video/mp4" }));
       keepUrl(objectUrl);
-      plain = null;
-      loader.hidden = true;
-      mountVideo(objectUrl);
-      openRiddle(keyBase64);
+      return objectUrl;
+    }
+
+    function playBlob(plain) {
+      if (!alive() || !video || !plain) return;
+      video.src = blobUrl(plain);
     }
 
     function mountVideo(objectUrl) {
       // No "#t=" fragment on the blob URL: older iOS WebKit fails to resolve it and refuses the
       // source. A tiny seek after the metadata paints the first frame instead of a black box.
-      const player = renderVideoPlayer(objectUrl, title);
+      const player = renderVideoPlayer(objectUrl, title, Boolean(guard));
       const frame = player.querySelector(".video-frame");
       video = player.querySelector("video");
+      if (guard) guard.attach(player, video);
       video.addEventListener("loadedmetadata", () => {
         if (video.paused && video.currentTime === 0) video.currentTime = 0.001;
       }, { once: true });
@@ -1861,12 +2352,19 @@
       text.hidden = true;
       form.hidden = true;
       if (hint) hint.hidden = true;
+      // A protected riddle guards its page from the start (keys, devtools), not only its video.
+      const guard = isProtected(puzzle) ? guardRiddlePage(session.username) : null;
+      if (guard) onLeave(guard.release);
       card.append(
-        renderLockedStage(puzzle, () => {
-          text.hidden = false;
-          form.hidden = false;
-          if (hint) hint.hidden = false;
-        })
+        renderLockedStage(
+          puzzle,
+          () => {
+            text.hidden = false;
+            form.hidden = false;
+            if (hint) hint.hidden = false;
+          },
+          guard
+        )
       );
     }
     if (hint) card.append(hint);
