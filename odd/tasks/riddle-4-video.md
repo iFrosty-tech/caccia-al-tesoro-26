@@ -50,6 +50,7 @@ ask-on-risk (forecast ~400-600 authored lines, binary excluded)
   - `cdp-p4.mjs mse` (T2 regression): 28 passed, 0 failed.
   - impeccable `detect.mjs --json style.css`: `[]`.
   - Not verified: real iPhone/Android rendering of `:has()` face-down state (fallback without `:has()`: face-up styling throughout, still themed), real-device lamp flicker cost.
+- T3 commit 6f8b90f (theme `tarot`). Assess base f480e8b committed-only: medium, review_due false, under_budget (393 lines) -> pending in slice. Parent spot check: node --check app.js/plankton.js OK; screenshots p4 locked 390 + playing 1280 reviewed.
 
 ## Next step
 Organizer: set MEDIA_KEY_p4, redeploy Code.gs (new version, same deployment), run setupUnlocks(), merge + push. Optional: soften the desktop devtools heuristic (R3-devtools-heuristic-lockout).
