@@ -173,7 +173,7 @@
   }
 
   // A riddle page may bring its own palette ("theme" in puzzles.json); the sea takes it too.
-  const THEMES = ["green"];
+  const THEMES = ["green", "tarot"];
 
   function applyTheme(name) {
     const theme = THEMES.indexOf(name) >= 0 ? name : "";

@@ -54,6 +54,51 @@ body[data-theme="green"] {
   accent-color: var(--light);
 }
 
+/* Tarot salon: the riddle-4 page ("theme": "tarot"), after its video "Il mazzo". The night sea
+   turns into a dark aubergine room under one warm lamp: gold line work, wine-red card backs,
+   cream text. Contrast on the card face: text 15.8:1, muted 9:1, placeholder 6.9:1, field edge
+   4:1, focus gold 12:1; cream on the wine button 8:1. */
+body[data-theme="tarot"] {
+  --abyss: #0c060a;
+  --deep: #1c0b15;
+  --ghost: #3a1a2b;
+  --panel: rgba(23, 10, 18, 0.86);
+  --panel-edge: rgba(239, 198, 120, 0.5);
+  --field: rgba(12, 6, 10, 0.6);
+  --field-edge: #8a6a63;
+  --wake: #7c1f42;
+  --wake-bright: #b23a5c;
+  --light: #efc678;
+  --light-soft: rgba(239, 198, 120, 0.45);
+  --light-rgb: 239, 198, 120;
+  --wake-rgb: 178, 58, 92;
+  --wake-deep-rgb: 124, 31, 66;
+  --deep-rgb: 92, 22, 52;
+  --sheen-rgb: 255, 230, 186;
+  --foam-rgb: 255, 244, 226;
+  --foam: #fff4e2;
+  --light-text: #f7deae;
+  --text: #f4e7d4;
+  --muted: #c9a99b;
+  --placeholder: #b59484;
+  --error: #ff9a8a;
+  /* Gold line art of the deck, drawn once and reused (no external assets). */
+  --tarot-gold: #e9c27a;
+  --tarot-emblem: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23e9c27a' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='60' cy='60' r='33'/%3E%3Ccircle cx='60' cy='60' r='37' stroke-opacity='.45'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(45 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(90 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(135 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(180 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(225 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(270 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(315 60 60)'/%3E%3Ccircle cx='60' cy='60' r='3' fill='%23e9c27a'/%3E%3Cpath d='M60 3V20M60 100V117M8 60H20M100 60H112' stroke-opacity='.7'/%3E%3Cpath d='M60 6l2.6 3.2L60 12.4l-2.6-3.2zM60 107.6l2.6 3.2L60 114l-2.6-3.2z' fill='%23e9c27a' stroke='none'/%3E%3C/svg%3E");
+  --tarot-rule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 16' fill='none' stroke='%23e9c27a' stroke-width='1' stroke-linecap='round'%3E%3Cdefs%3E%3ClinearGradient id='g' gradientUnits='userSpaceOnUse' x1='0' x2='200' y1='0' y2='0'%3E%3Cstop offset='0' stop-color='%23e9c27a' stop-opacity='0'/%3E%3Cstop offset='.4' stop-color='%23e9c27a'/%3E%3Cstop offset='.6' stop-color='%23e9c27a'/%3E%3Cstop offset='1' stop-color='%23e9c27a' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 8H84M116 8H200' stroke='url(%23g)'/%3E%3Cpath d='M100 2.5L105.5 8L100 13.5L94.5 8Z'/%3E%3Ccircle cx='89' cy='8' r='1.3' fill='%23e9c27a' stroke='none'/%3E%3Ccircle cx='111' cy='8' r='1.3' fill='%23e9c27a' stroke='none'/%3E%3C/svg%3E");
+  --tarot-corner-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23e9c27a' stroke-width='1' stroke-linecap='round'%3E%3Cpath d='M2.5 13V2.5H13' stroke-opacity='.8'/%3E%3Cpath d='M2.5 9.5A7 7 0 0 1 9.5 2.5'/%3E%3Ccircle cx='7.4' cy='7.4' r='1.2' fill='%23e9c27a' stroke='none'/%3E%3C/svg%3E");
+  --tarot-corner-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23e9c27a' stroke-width='1' stroke-linecap='round'%3E%3Cg transform='matrix(-1 0 0 1 20 0)'%3E%3Cpath d='M2.5 13V2.5H13' stroke-opacity='.8'/%3E%3Cpath d='M2.5 9.5A7 7 0 0 1 9.5 2.5'/%3E%3Ccircle cx='7.4' cy='7.4' r='1.2' fill='%23e9c27a' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  --tarot-corner-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23e9c27a' stroke-width='1' stroke-linecap='round'%3E%3Cg transform='matrix(1 0 0 -1 0 20)'%3E%3Cpath d='M2.5 13V2.5H13' stroke-opacity='.8'/%3E%3Cpath d='M2.5 9.5A7 7 0 0 1 9.5 2.5'/%3E%3Ccircle cx='7.4' cy='7.4' r='1.2' fill='%23e9c27a' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  --tarot-corner-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23e9c27a' stroke-width='1' stroke-linecap='round'%3E%3Cg transform='matrix(-1 0 0 -1 20 20)'%3E%3Cpath d='M2.5 13V2.5H13' stroke-opacity='.8'/%3E%3Cpath d='M2.5 9.5A7 7 0 0 1 9.5 2.5'/%3E%3Ccircle cx='7.4' cy='7.4' r='1.2' fill='%23e9c27a' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  accent-color: var(--light);
+  scrollbar-color: var(--ghost) transparent;
+  /* The room: dark aubergine walls, a wine-red glow on the floor, corners lost in shadow.
+     The lamp's pool of light is body::before, so it can breathe like a flame. */
+  background-image:
+    radial-gradient(130% 70% at 50% 118%, rgba(var(--deep-rgb), 0.55), transparent 70%),
+    radial-gradient(140% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55));
+}
+
 * {
   box-sizing: border-box;
 }
@@ -2392,6 +2437,332 @@ code {
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+}
+
+/* ---------- Tarot deck: the riddle-4 page ("theme": "tarot") ---------- */
+
+/* One warm bulb hangs above the table: its pool of light flickers like a flame, very slowly. */
+body[data-theme="tarot"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(38% 30% at 50% -4%, rgba(255, 214, 150, 0.2), transparent 70%),
+    radial-gradient(75% 60% at 50% 0%, rgba(214, 120, 90, 0.14), transparent 72%);
+  pointer-events: none;
+  animation: tarot-lamp 9s ease-in-out infinite;
+}
+
+@keyframes tarot-lamp {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  22% {
+    opacity: 0.86;
+  }
+  27% {
+    opacity: 0.96;
+  }
+  58% {
+    opacity: 0.8;
+  }
+  64% {
+    opacity: 0.93;
+  }
+}
+
+body[data-theme="tarot"].is-playing .site-header {
+  background: linear-gradient(var(--abyss) 40%, rgba(12, 6, 10, 0));
+}
+
+body[data-theme="tarot"] ::selection {
+  background: rgba(var(--light-rgb), 0.32);
+  color: #fffaf0;
+}
+
+/* The riddle is a card of the deck: a gold border that glows in the lamplight, a second
+   fine frame inside it with small flourishes at the corners. */
+body[data-theme="tarot"] .puzzle {
+  border-radius: 16px;
+  border-color: rgba(var(--light-rgb), 0.62);
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(92, 28, 58, 0.32), transparent 70%),
+    linear-gradient(180deg, rgba(26, 11, 20, 0.94), rgba(16, 7, 13, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 26px -6px rgba(var(--light-rgb), 0.42),
+    0 30px 60px -28px rgba(0, 0, 0, 0.9);
+}
+
+body[data-theme="tarot"] .puzzle::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(var(--light-rgb), 0.3);
+  border-radius: 10px;
+  background:
+    var(--tarot-corner-tl) top 3px left 3px / 18px 18px no-repeat,
+    var(--tarot-corner-tr) top 3px right 3px / 18px 18px no-repeat,
+    var(--tarot-corner-bl) bottom 3px left 3px / 18px 18px no-repeat,
+    var(--tarot-corner-br) bottom 3px right 3px / 18px 18px no-repeat;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Title in the card's cartouche: spaced capitals over a gold rule with a diamond. */
+body[data-theme="tarot"] .riddle-head {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+body[data-theme="tarot"] .riddle-title {
+  padding-top: 6px;
+  font-weight: 300;
+  font-size: clamp(1.9rem, 9vw, 2.5rem);
+  letter-spacing: 0.16em;
+  /* The tracking also follows the last letter: pulled back so the word stays centred. */
+  margin-right: -0.16em;
+  text-transform: uppercase;
+  color: var(--light-text);
+  text-shadow:
+    0 0 1px rgba(255, 236, 200, 0.7),
+    0 0 22px rgba(var(--light-rgb), 0.45);
+}
+
+body[data-theme="tarot"] .riddle-head::after {
+  content: "";
+  display: block;
+  width: min(220px, 70%);
+  height: 16px;
+  margin: 12px auto 0;
+  background: var(--tarot-rule) center / 100% 100% no-repeat;
+}
+
+body[data-theme="tarot"] .riddle-subtitle {
+  margin-inline: auto;
+}
+
+body[data-theme="tarot"] .media-label {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--light);
+}
+
+body[data-theme="tarot"] .answer-form {
+  border-top-color: rgba(var(--light-rgb), 0.18);
+}
+
+body[data-theme="tarot"] input[type="text"]:focus {
+  background: rgba(20, 8, 15, 0.9);
+}
+
+body[data-theme="tarot"] button:not(.orb-button):not(.video-fullscreen):not(.btn-secondary) {
+  border-color: rgba(var(--light-rgb), 0.7);
+  color: var(--foam);
+}
+
+body[data-theme="tarot"] .btn-secondary {
+  background: rgba(12, 6, 10, 0.45);
+}
+
+/* Media rails: a warm track instead of the blue water line. */
+body[data-theme="tarot"] .wake-seek::-webkit-slider-runnable-track {
+  background:
+    var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
+    rgba(var(--light-rgb), 0.2);
+}
+
+body[data-theme="tarot"] .wake-seek::-moz-range-track,
+body[data-theme="tarot"] .reveal-bar {
+  background: rgba(var(--light-rgb), 0.2);
+}
+
+body[data-theme="tarot"] .loader {
+  --loader-base: rgba(var(--light-rgb), 0.28);
+}
+
+/* Face down: until the video opens (sealed, or still downloading) the card shows its back —
+   wine-red, card-shaped, the gold eight-petal rose of the deck in the middle. */
+body[data-theme="tarot"] .puzzle:has(> .reveal:not(.is-revealed)) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 5 / 8;
+  margin-inline: auto;
+  padding-block: 32px;
+  background:
+    radial-gradient(70% 45% at 50% 50%, rgba(178, 58, 92, 0.32), transparent 72%),
+    radial-gradient(130% 90% at 50% 40%, #44122c, #2a0b1c 72%, #1d0713);
+}
+
+body[data-theme="tarot"] .puzzle:has(> .reveal:not(.is-revealed)) .riddle-head {
+  margin-bottom: 8px;
+}
+
+body[data-theme="tarot"] .reveal-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 0;
+  text-align: center;
+}
+
+body[data-theme="tarot"] .reveal-seal::before,
+body[data-theme="tarot"] .puzzle:has(> .reveal:not(.is-revealed)) .reveal-loader::before {
+  content: "";
+  display: block;
+  width: clamp(112px, 38vw, 148px);
+  aspect-ratio: 1;
+  margin: 4px auto 18px;
+  background: var(--tarot-emblem) center / contain no-repeat;
+  filter: drop-shadow(0 0 6px rgba(var(--light-rgb), 0.45));
+  animation: tarot-ember 4.8s ease-in-out infinite;
+}
+
+@keyframes tarot-ember {
+  50% {
+    filter: drop-shadow(0 0 12px rgba(var(--light-rgb), 0.8));
+  }
+}
+
+body[data-theme="tarot"] .countdown.is-sealed {
+  font-weight: 300;
+  font-size: clamp(1.4rem, 7vw, 1.9rem);
+  letter-spacing: 0.32em;
+  margin-right: -0.32em;
+  text-transform: uppercase;
+  color: var(--light-text);
+  animation-name: tarot-seal;
+}
+
+@keyframes tarot-seal {
+  50% {
+    text-shadow:
+      0 0 1px rgba(255, 236, 200, 0.9),
+      0 0 30px rgba(var(--light-rgb), 0.75);
+  }
+}
+
+body[data-theme="tarot"] .reveal-seal .countdown-when {
+  max-width: 30ch;
+  margin-top: 14px;
+  text-wrap: balance;
+}
+
+body[data-theme="tarot"] .reveal-seal .seal-row {
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+body[data-theme="tarot"] .reveal-seal .seal-check {
+  border-color: rgba(var(--light-rgb), 0.55);
+  background: rgba(12, 6, 10, 0.4);
+}
+
+body[data-theme="tarot"] .reveal-seal .seal-check:hover {
+  border-color: rgba(var(--light-rgb), 0.85);
+}
+
+body[data-theme="tarot"] .reveal-loader {
+  text-align: center;
+}
+
+/* Face up: the moment the video opens, the card turns over. */
+body[data-theme="tarot"] .puzzle:has(> .reveal.is-revealed) {
+  animation: tarot-turn 0.9s var(--ease-out);
+}
+
+@keyframes tarot-turn {
+  from {
+    transform: perspective(1400px) rotateY(80deg);
+    opacity: 0.4;
+  }
+}
+
+/* An answer saved: the gold border flares, then settles back into its glow. Declared after the
+   turn with the same weight, so a save after the reveal still flares. */
+body[data-theme="tarot"] .puzzle.saved:has(> .reveal),
+body[data-theme="tarot"] .puzzle.saved {
+  animation: tarot-flare 1.6s var(--ease-out);
+}
+
+@keyframes tarot-flare {
+  0% {
+    border-color: rgba(var(--light-rgb), 1);
+    box-shadow:
+      0 0 0 1px rgba(var(--light-rgb), 0.5),
+      0 0 56px -4px rgba(var(--light-rgb), 0.75),
+      0 30px 60px -28px rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* The video sits in the card like its picture: a fine gold frame that catches the light. */
+body[data-theme="tarot"] .video-frame {
+  border-color: rgba(var(--light-rgb), 0.6);
+  border-radius: 8px;
+  background: #000;
+  box-shadow:
+    0 0 0 4px rgba(12, 6, 10, 0.9),
+    0 0 0 5px rgba(var(--light-rgb), 0.22),
+    0 0 30px -6px rgba(var(--light-rgb), 0.4),
+    0 24px 48px -24px rgba(0, 0, 0, 0.9);
+}
+
+body[data-theme="tarot"] .video-player.is-fullscreen .video-frame {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body[data-theme="tarot"] .video-veil {
+  background:
+    linear-gradient(to top, rgba(var(--deep-rgb), 0.35), transparent 55%),
+    radial-gradient(closest-side, rgba(12, 6, 10, 0.25), rgba(12, 6, 10, 0.72));
+}
+
+/* The player's name over the picture, warmed to the room's light (still plainly legible). */
+body[data-theme="tarot"] .video-watermark {
+  filter: sepia(0.8) saturate(1.4);
+}
+
+/* Cover while devtools look open or the page is hidden: the card turned face down again.
+   Opaque on purpose: it hides the picture. */
+body[data-theme="tarot"] .video-guard {
+  gap: 8px;
+  background:
+    radial-gradient(60% 80% at 50% 50%, #3a1026, #1d0713 75%) #1d0713;
+  box-shadow: inset 0 0 0 6px #1d0713, inset 0 0 0 7px rgba(var(--light-rgb), 0.35);
+}
+
+body[data-theme="tarot"] .video-guard-title {
+  font-weight: 400;
+  font-size: 0.9375rem;
+  letter-spacing: 0.22em;
+  margin-right: -0.22em;
+  text-transform: uppercase;
+  color: var(--light-text);
+}
+
+body[data-theme="tarot"] .video-guard-text {
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+@media (min-width: 560px) {
+  body[data-theme="tarot"] .video-guard::before {
+    content: "";
+    width: 64px;
+    height: 64px;
+    margin-bottom: 6px;
+    background: var(--tarot-emblem) center / contain no-repeat;
+    opacity: 0.85;
   }
 }
 

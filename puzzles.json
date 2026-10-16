@@ -28,6 +28,7 @@
     "video": "video/enigma-4.enc",
     "videoType": "video/mp4; codecs=\"avc1.640032, mp4a.40.2\"",
     "protect": true,
-    "gate": "flag"
+    "gate": "flag",
+    "theme": "tarot"
   }
 ]

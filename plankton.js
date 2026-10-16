@@ -35,6 +35,8 @@
   const PALETTES = {
     "": { light: "102, 246, 255", wake: "30, 139, 255", flare: "#d9fdff", near: "#5fc8ff", far: "#3a86e8" },
     green: { light: "109, 255, 180", wake: "24, 196, 110", flare: "#dcffec", near: "#5fe8a0", far: "#2fae6a" },
+    // Tarot salon: gold dust drifting in lamplight, with a few wine-red motes.
+    tarot: { light: "240, 198, 120", wake: "178, 58, 92", flare: "#fff1d8", near: "#e8b968", far: "#9c3d5c" },
   };
   let palette = PALETTES[""];
 
