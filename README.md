@@ -172,6 +172,15 @@ L'immagine è pubblicata **solo cifrata** (`periodica/tavola.enc`) e la pagina l
 
 Il backend consegna la chiave con l'azione `getAssetKey` a qualunque giocatore loggato (nessun orario né spunta). Gli id ammessi sono in `OPEN_ASSETS` in `Code.gs`, separati dagli enigmi: `getPuzzleKey` non consegna mai queste chiavi. L'id resta `tavola` (`MEDIA_KEY_tavola`) anche se la cartella si chiama `periodica/`: rinominare la pagina non tocca il backend.
 
+#### Chi ha trovato la pagina (foglio `Visits`)
+
+Ogni volta che il backend consegna la chiave della tavola, cioè ogni volta che un giocatore loggato apre `/periodica/` e vede l'immagine, registra la visita nel foglio **`Visits`** (creato da solo alla prima visita): una riga per giocatore, con `username`, `assetId` (`tavola`), `firstSeenAt` (la prima volta che l'ha vista: chi ha trovato la via e quando), `lastSeenAt` (l'ultima) e `visits` (quante volte l'ha aperta, ricaricamenti compresi). Ordina per `firstSeenAt` per sapere chi ci è arrivato per primo.
+
+- Chi apre la pagina **senza** aver fatto l'accesso non viene registrato: il sito non sa chi è. Lo sarà quando, dopo l'accesso, tornerà sulla pagina e vedrà l'immagine.
+- Anche le tue visite di prova finiscono nel foglio: cancella pure la riga, si ricrea alla visita successiva.
+- La visita viene scritta prima di consegnare la chiave: se il foglio è occupato il giocatore vede "Server occupato" con **Riprova**, così nessuno vede la tavola senza essere registrato.
+- Serve il `Code.gs` aggiornato: copialo nell'editor e ripubblica come **nuova versione dello stesso deployment** (sezione 5). Il sito non cambia.
+
 Per sostituire l'immagine (o cambiare chiave):
 
 1. Convertila in WebP (qualità 80 basta, il file resta sotto il MB) e cifrala con una chiave nuova, partendo da un file fuori dal repo:
@@ -187,6 +196,8 @@ Per sostituire l'immagine (o cambiare chiave):
 ## 4. Vedere le risposte
 
 Apri il Google Sheet, foglio **`Answers`**: una riga per giocatore ed enigma (`username`, `puzzleId`, `answer`, `updatedAt`). Ogni modifica aggiorna la stessa riga.
+
+Chi ha visto la pagina nascosta `/periodica/` è nel foglio **`Visits`** (vedi sopra).
 
 ## 5. Aggiornare il codice Apps Script
 

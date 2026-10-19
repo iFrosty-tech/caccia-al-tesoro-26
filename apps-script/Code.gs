@@ -5,6 +5,7 @@
  *   Users   -> username | token | createdAt | password
  *   Answers -> username | puzzleId | answer | updatedAt
  *   Unlocks -> puzzleId | unlocked   (created by running setupUnlocks() once from the editor)
+ *   Visits  -> username | assetId | firstSeenAt | lastSeenAt | visits
  *
  * Actions (POST body is a JSON string, sent as text/plain to avoid CORS preflight):
  *   { action: "register",     username, password }
@@ -28,6 +29,8 @@
  * Open assets (OPEN_ASSETS) are encrypted files that are not riddles, such as the image of a
  * hidden page: getAssetKey hands their key to any logged-in player, with no time or flag gate.
  * They have their own allow-list, apart from the riddle gates: getPuzzleKey never returns their key.
+ * Every key handed out is logged in the Visits sheet, one row per player and asset, so the
+ * organizer sees who reached the hidden page, when first and how often.
  *
  * There is intentionally no endpoint that lists other players' data.
  * Passwords are stored in plain text on purpose: secrecy is not a goal and the
@@ -38,6 +41,8 @@ var USERS_SHEET = 'Users';
 var ANSWERS_SHEET = 'Answers';
 var USERS_HEADERS = ['username', 'token', 'createdAt', 'password'];
 var ANSWERS_HEADERS = ['username', 'puzzleId', 'answer', 'updatedAt'];
+var VISITS_SHEET = 'Visits';
+var VISITS_HEADERS = ['username', 'assetId', 'firstSeenAt', 'lastSeenAt', 'visits'];
 
 var USERNAME_MIN = 2;
 var USERNAME_MAX = 30;
@@ -230,12 +235,34 @@ function puzzleKeyResponse(puzzleId, now, readProperty, readFlags) {
   return { ok: true, locked: false, key: String(key).trim() };
 }
 
-/** Returns the media key of an open asset to any logged-in player. */
+/** Returns the media key of an open asset to any logged-in player, and logs the visit. */
 function getAssetKey(req) {
-  authenticate(req);
+  var user = authenticate(req);
   var assetId = typeof req.assetId === 'string' ? req.assetId.trim() : '';
-  return assetKeyResponse(assetId, function (name) {
+  var response = assetKeyResponse(assetId, function (name) {
     return PropertiesService.getScriptProperties().getProperty(name);
+  });
+  // Logged before the key leaves: whoever sees the asset is in the sheet.
+  recordVisit(user.username, assetId);
+  return response;
+}
+
+/** Upserts the player's row in Visits: first visit kept, last visit and count updated. */
+function recordVisit(username, assetId) {
+  withLock(function () {
+    var sheet = getSheet(VISITS_SHEET, VISITS_HEADERS);
+    var rows = readRows(sheet);
+    var key = username.toLowerCase();
+    var now = new Date();
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i][0].toLowerCase() === key && rows[i][1] === assetId) {
+        var visits = (parseInt(rows[i][4], 10) || 0) + 1;
+        // +2: one for the header row, one because sheet rows are 1-based.
+        sheet.getRange(i + 2, 4, 1, 2).setValues([[now, visits]]);
+        return;
+      }
+    }
+    sheet.appendRow([safeCell(username), assetId, now, now, 1]);
   });
 }
 
