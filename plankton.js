@@ -37,6 +37,8 @@
     green: { light: "109, 255, 180", wake: "24, 196, 110", flare: "#dcffec", near: "#5fe8a0", far: "#2fae6a" },
     // Tarot salon: gold dust drifting in lamplight, with a few wine-red motes.
     tarot: { light: "240, 198, 120", wake: "178, 58, 92", flare: "#fff1d8", near: "#e8b968", far: "#9c3d5c" },
+    // Shadow theatre: dust drifting through the lamp's beam, amber with a few umber motes.
+    ombre: { light: "240, 166, 64", wake: "232, 150, 60", flare: "#ffe9c4", near: "#e8a24a", far: "#8a5a2a" },
   };
   let palette = PALETTES[""];
 

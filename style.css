@@ -99,6 +99,56 @@ body[data-theme="tarot"] {
     radial-gradient(140% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55));
 }
 
+/* Shadow theatre: the riddle-5 page ("theme": "ombre"), after its video of "ombre cinesi". The
+   page is the dark theatre seen from the audience; the riddle card is the backlit paper screen,
+   and shadows.js stands hard black puppets between lamp and paper. Outside the card the text is
+   warm cream on near-black umber (text 16:1, muted 11:1); on the paper every token is remapped
+   on .puzzle below (ink 8.9:1 on the base paper, soft ink 6.5:1, placeholder 5.5:1, ember focus
+   ring 4.9:1, amber on the black button 10:1). */
+body[data-theme="ombre"] {
+  --abyss: #0b0806;
+  --deep: #1a120b;
+  --ghost: #3a2a1c;
+  --panel: rgba(28, 18, 10, 0.86);
+  --panel-edge: rgba(240, 166, 64, 0.22);
+  --field: rgba(11, 8, 6, 0.6);
+  --field-edge: #6b4f36;
+  --wake: #17100a;
+  --wake-bright: #3a2614;
+  --light: #f0a640;
+  --light-soft: rgba(240, 166, 64, 0.4);
+  --light-rgb: 240, 166, 64;
+  --wake-rgb: 232, 150, 60;
+  --wake-deep-rgb: 120, 60, 20;
+  --deep-rgb: 90, 50, 20;
+  --sheen-rgb: 255, 220, 160;
+  --foam-rgb: 255, 236, 200;
+  --foam: #ffecc8;
+  --light-text: #f7d9a8;
+  --text: #f3e6d2;
+  --muted: #cdb393;
+  --placeholder: #a98f72;
+  --error: #ff9a8a;
+  /* The theatre's own colours: the paper, its ink, the lamp's ember and amber. */
+  --ombre-paper: #d6a86f;
+  --ombre-paper-light: #e6c08a;
+  --ombre-ink: #140c06;
+  --ombre-ink-soft: #42301e;
+  --ombre-ember: #6e280b;
+  --ombre-amber: #f0a640;
+  --ombre-wood: #1a1109;
+  --ombre-floor: 7vh;
+  /* Where the lamp sits, -1..1 on both axes: shadows.js writes it, the stage and the card read it. */
+  --ombre-tx: 0;
+  --ombre-ty: 0;
+  accent-color: var(--light);
+  scrollbar-color: var(--ghost) transparent;
+  /* The house: a faint spill of the lamp high on the back wall, warmth rising from the stage. */
+  background-image:
+    radial-gradient(70% 45% at 50% -5%, rgba(240, 166, 64, 0.1), transparent 70%),
+    radial-gradient(120% 70% at 50% 110%, rgba(var(--deep-rgb), 0.5), transparent 70%);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -2763,6 +2813,482 @@ body[data-theme="tarot"] .video-guard-text {
     margin-bottom: 6px;
     background: var(--tarot-emblem) center / contain no-repeat;
     opacity: 0.85;
+  }
+}
+
+/* ---------- Shadow theatre: the riddle-5 page ("theme": "ombre") ---------- */
+
+/* The stage floor: a dark band along the bottom of the house, where the puppets stand. Painted
+   after the stage (a body child), so the puppets rise from behind it. */
+body[data-theme="ombre"]::after {
+  content: "";
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  height: var(--ombre-floor);
+  background: linear-gradient(180deg, #070403, #030201);
+  box-shadow: 0 -1px 0 rgba(240, 166, 64, 0.1);
+  pointer-events: none;
+}
+
+/* Room under the card for the stage apron: at the end of the page the puppets stand in view. */
+body[data-theme="ombre"] main {
+  padding-bottom: max(30vh, 180px);
+}
+
+body[data-theme="ombre"].is-playing .site-header {
+  background: linear-gradient(var(--abyss) 40%, rgba(11, 8, 6, 0));
+}
+
+body[data-theme="ombre"] ::selection {
+  background: rgba(var(--light-rgb), 0.35);
+  color: #fff6e4;
+}
+
+body[data-theme="ombre"] .puzzle ::selection {
+  background: rgba(110, 40, 11, 0.3);
+  color: var(--ombre-ink);
+}
+
+/* The audience's seat: the whole view leans with the lamp, a few degrees at most. */
+body[data-theme="ombre"] .riddle-view {
+  transform: perspective(1400px) rotateX(calc(var(--ombre-ty) * -2.5deg)) rotateY(calc(var(--ombre-tx) * 3deg));
+}
+
+/* The paper screen. Everything on it reads from the card's own tokens: ink for text, umber for
+   the quiet lines, ember for focus and the lit state, black silhouettes for the controls. */
+body[data-theme="ombre"] .puzzle {
+  --text: var(--ombre-ink);
+  --muted: var(--ombre-ink-soft);
+  --light-text: var(--ombre-ink);
+  --placeholder: #5c4530;
+  --error: #7a1a0c;
+  --field: rgba(255, 246, 228, 0.42);
+  --field-edge: #4a3320;
+  --light: var(--ombre-ember);
+  --light-rgb: 110, 40, 11;
+  --light-soft: rgba(110, 40, 11, 0.45);
+  --wake: var(--ombre-ink);
+  --wake-bright: #3a2614;
+  --wake-rgb: 23, 16, 10;
+  --sheen-rgb: 240, 166, 64;
+  --deep-rgb: 60, 35, 15;
+  color: var(--ombre-ink);
+  border-color: #2a1a0e;
+  border-radius: 10px;
+  background:
+    radial-gradient(70% 55% at 50% 18%, rgba(255, 240, 205, 0.55), transparent 70%),
+    radial-gradient(160% 130% at 50% 40%, transparent 55%, rgba(74, 42, 16, 0.5)),
+    repeating-linear-gradient(0deg, rgba(60, 30, 10, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, var(--ombre-paper-light), var(--ombre-paper));
+  /* The wooden frame of the screen: two flat rings; the soft shadow it casts is ::before. */
+  box-shadow:
+    0 0 0 5px var(--ombre-wood),
+    0 0 0 6px rgba(240, 166, 64, 0.1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  /* Opacity only: the base entrance also moves the card, which would make it a stacking
+     context for a moment and lift its shadow plate (::before) above the paper. */
+  animation-name: ombre-surface;
+}
+
+@keyframes ombre-surface {
+  from {
+    opacity: 0.6;
+  }
+}
+
+/* The shadow the screen casts on the back wall, moving against the lamp. It sits behind the
+   card (the card makes no stacking context of its own; the view does), blurred once and then
+   only moved. Both selectors: the base .lit rule would otherwise scale it back to a hairline. */
+body[data-theme="ombre"] .puzzle::before,
+body[data-theme="ombre"] .puzzle.lit::before {
+  inset: 14px 6px -10px;
+  z-index: -1;
+  height: auto;
+  border-radius: inherit;
+  background: rgba(5, 3, 2, 0.75);
+  filter: blur(22px);
+  transform: translate3d(calc(var(--ombre-tx) * -16px), calc(var(--ombre-ty) * -12px), 0);
+  will-change: transform;
+  transition: none;
+}
+
+/* The cold lamp: a grey pane that takes the colour out of the paper (saturation blend) while
+   the riddle is sealed, breathing slowly. The lamp warms when the video opens: the pane fades
+   over 1.6 s and the amber beneath comes through. */
+body[data-theme="ombre"] .puzzle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: #8c8c88;
+  mix-blend-mode: saturation;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.6s var(--ease-out);
+}
+
+body[data-theme="ombre"] .puzzle:has(> .reveal:not(.is-revealed))::after {
+  opacity: 1;
+  animation: ombre-cold 6s ease-in-out infinite;
+}
+
+@keyframes ombre-cold {
+  50% {
+    opacity: 0.88;
+  }
+}
+
+/* The sign of the title frame: black capitals, mounted on two thin sticks. */
+body[data-theme="ombre"] .riddle-head {
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+body[data-theme="ombre"] .riddle-title {
+  position: relative;
+  display: table;
+  margin-inline: auto;
+  padding: 4px 0 30px;
+  font-weight: 700;
+  font-size: clamp(1.75rem, 8.5vw, 2.4rem);
+  line-height: 1.05;
+  letter-spacing: 0.14em;
+  /* The tracking also follows the last letter: the same space before the first keeps the
+     shrink-to-fit sign centred under its sticks. */
+  padding-left: 0.14em;
+  text-transform: uppercase;
+  color: var(--ombre-ink);
+  text-shadow: none;
+}
+
+body[data-theme="ombre"] .riddle-title::before,
+body[data-theme="ombre"] .riddle-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  width: 2px;
+  height: 28px;
+  background: var(--ombre-ink);
+}
+
+body[data-theme="ombre"] .riddle-title::after {
+  left: auto;
+  right: 18%;
+}
+
+body[data-theme="ombre"] .riddle-subtitle {
+  margin-inline: auto;
+  font-style: normal;
+  font-weight: 400;
+}
+
+body[data-theme="ombre"] .media-label {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--ombre-ink-soft);
+}
+
+body[data-theme="ombre"] .answer-form {
+  border-top-color: rgba(74, 51, 32, 0.35);
+}
+
+/* Ink outline on paper; the field lightens like a patch of thinner paper. */
+body[data-theme="ombre"] .puzzle input[type="text"] {
+  color: var(--ombre-ink);
+  caret-color: var(--ombre-ember);
+}
+
+body[data-theme="ombre"] .puzzle input[type="text"]:focus {
+  border-color: var(--ombre-ember);
+  background: rgba(255, 246, 228, 0.6);
+  box-shadow: 0 0 0 3px rgba(110, 40, 11, 0.18);
+}
+
+body[data-theme="ombre"] .puzzle :is(button, a, summary):focus-visible {
+  outline-color: var(--ombre-ember);
+}
+
+/* The primary action is a puppet too: a black cutout with the lamp showing through its letters. */
+body[data-theme="ombre"] .puzzle button:not(.orb-button):not(.video-fullscreen):not(.btn-secondary) {
+  color: var(--ombre-amber);
+  background: var(--ombre-ink);
+  border-color: var(--ombre-ink);
+  box-shadow: 0 12px 24px -14px rgba(10, 5, 2, 0.9);
+}
+
+body[data-theme="ombre"] .puzzle button:not(.orb-button):not(.video-fullscreen):not(.btn-secondary):hover {
+  box-shadow: 0 14px 28px -12px rgba(10, 5, 2, 1);
+}
+
+body[data-theme="ombre"] .puzzle .btn-secondary {
+  color: var(--ombre-ink);
+  background: rgba(255, 246, 228, 0.25);
+  border-color: var(--ombre-ink-soft);
+}
+
+body[data-theme="ombre"] .puzzle .btn-secondary:hover {
+  border-color: var(--ombre-ember);
+  box-shadow: none;
+}
+
+body[data-theme="ombre"] .puzzle .save-status.ok {
+  text-shadow: none;
+}
+
+/* Media rails: an umber track on the paper instead of the blue water line. */
+body[data-theme="ombre"] .wake-seek::-webkit-slider-runnable-track {
+  background:
+    var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
+    rgba(74, 51, 32, 0.28);
+  box-shadow: none;
+}
+
+body[data-theme="ombre"] .wake-seek::-moz-range-track,
+body[data-theme="ombre"] .reveal-bar {
+  background: rgba(74, 51, 32, 0.28);
+}
+
+body[data-theme="ombre"] .reveal-bar::before {
+  box-shadow: none;
+}
+
+body[data-theme="ombre"] .loader {
+  --loader-base: rgba(74, 51, 32, 0.3);
+}
+
+/* Sealed: the lamp is cold, the paper grey, and the seal is a word cut out of black card. */
+body[data-theme="ombre"] .puzzle:has(> .reveal:not(.is-revealed)) .riddle-head {
+  margin-bottom: 8px;
+}
+
+body[data-theme="ombre"] .reveal-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 0;
+  text-align: center;
+}
+
+body[data-theme="ombre"] .countdown.is-sealed {
+  font-weight: 700;
+  font-size: clamp(1.5rem, 7.5vw, 2rem);
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  text-transform: uppercase;
+  color: var(--ombre-ink);
+  text-shadow: none;
+  animation-name: ombre-seal;
+}
+
+@keyframes ombre-seal {
+  50% {
+    opacity: 0.78;
+  }
+}
+
+body[data-theme="ombre"] .reveal-seal .countdown-when {
+  max-width: 30ch;
+  margin-top: 14px;
+  text-wrap: balance;
+}
+
+body[data-theme="ombre"] .reveal-seal .seal-row {
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+body[data-theme="ombre"] .reveal-loader {
+  text-align: center;
+}
+
+/* An answer saved: no flare on the frame; a hand waves across the stage instead (below). */
+body[data-theme="ombre"] .puzzle.saved {
+  animation: none;
+}
+
+/* The video sits in its own small puppet screen: a dark wooden frame, paper light inside. */
+body[data-theme="ombre"] .video-frame {
+  border-color: #3a2414;
+  border-radius: 6px;
+  background: #000;
+  box-shadow:
+    0 0 0 6px var(--ombre-wood),
+    0 0 0 7px rgba(240, 166, 64, 0.14),
+    0 24px 48px -24px rgba(0, 0, 0, 0.9);
+}
+
+body[data-theme="ombre"] .video-player.is-fullscreen .video-frame {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body[data-theme="ombre"] .video-veil {
+  background:
+    linear-gradient(to top, rgba(var(--deep-rgb), 0.35), transparent 55%),
+    radial-gradient(closest-side, rgba(214, 168, 111, 0.08), rgba(20, 12, 6, 0.62));
+}
+
+/* The stage (mounted by shadows.js): puppets between the lamp and the paper, at four depths.
+   Each layer slides with the lamp by its own depth; the ones nearest the lamp are also the
+   softest (a blur set once, never animated) and the palest. The nearest to the paper is pure
+   black and sharp. */
+.ombre-stage {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  color: #050302;
+  pointer-events: none;
+}
+
+.ombre-layer {
+  position: absolute;
+  transform: translate3d(calc(var(--ombre-tx) * var(--depth)), calc(var(--ombre-ty) * var(--depth) * 0.6), 0);
+}
+
+.ombre-layer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The lamp's pool of light on the back wall. Grey while sealed, breathing; it warms on reveal. */
+.ombre-halo {
+  --depth: 6px;
+  top: -24vh;
+  left: 50%;
+  width: 140vw;
+  height: 90vh;
+  margin-left: -70vw;
+  background: radial-gradient(closest-side, rgba(240, 166, 64, 0.24), rgba(240, 166, 64, 0.06) 50%, transparent 72%);
+  transition: filter 1.6s var(--ease-out);
+}
+
+body[data-theme="ombre"]:has(.reveal:not(.is-revealed)) .ombre-halo {
+  filter: saturate(0);
+  animation: ombre-breathe 6s ease-in-out infinite;
+}
+
+@keyframes ombre-breathe {
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.ombre-skyline {
+  right: -4%;
+  bottom: var(--ombre-floor);
+  left: -4%;
+  height: 24vh;
+  will-change: transform;
+}
+
+.ombre-far {
+  --depth: 22px;
+  opacity: 0.8;
+  filter: blur(1.6px);
+}
+
+.ombre-church {
+  --depth: 16px;
+  opacity: 0.9;
+  filter: blur(0.8px);
+}
+
+.ombre-near {
+  --depth: 9px;
+}
+
+/* The town rises from the floor when the lamp comes on, farthest first. */
+.ombre-skyline svg {
+  transform: translate3d(0, 112%, 0);
+  transition: transform 1.6s var(--ease-out);
+}
+
+.ombre-church svg {
+  transition-duration: 1.8s;
+  transition-delay: 0.2s;
+}
+
+.ombre-near svg {
+  transition-duration: 1.5s;
+  transition-delay: 0.35s;
+}
+
+body[data-theme="ombre"]:has(.reveal.is-revealed) .ombre-skyline svg {
+  transform: none;
+}
+
+/* The puppeteer's hand, raised while the riddle is sealed; it lowers out as the town rises. */
+.ombre-hand {
+  --depth: 30px;
+  right: 6%;
+  bottom: var(--ombre-floor);
+  width: clamp(110px, 24vw, 200px);
+  height: 34vh;
+  opacity: 0.78;
+  filter: blur(2.4px);
+  will-change: transform;
+}
+
+.ombre-hand svg {
+  transition: transform 1.2s cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+body[data-theme="ombre"]:has(.reveal.is-revealed) .ombre-hand svg {
+  transform: translate3d(0, 112%, 0);
+}
+
+/* A saved answer: a hand waves across the stage once, like a puppet taking the applause. */
+.ombre-wave {
+  --depth: 12px;
+  bottom: var(--ombre-floor);
+  left: 0;
+  width: clamp(90px, 20vw, 160px);
+  height: 26vh;
+  will-change: transform;
+}
+
+.ombre-wave svg {
+  opacity: 0;
+  transform: translate3d(-120%, 12%, 0);
+}
+
+body[data-theme="ombre"]:has(.puzzle.saved) .ombre-wave svg {
+  animation: ombre-wave 1.2s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+@keyframes ombre-wave {
+  0% {
+    opacity: 0;
+    transform: translate3d(-120%, 12%, 0) rotate(-10deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  35% {
+    transform: translate3d(28vw, 0, 0) rotate(12deg);
+  }
+  60% {
+    transform: translate3d(58vw, 2%, 0) rotate(-8deg);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(104vw, 12%, 0) rotate(6deg);
   }
 }
 
