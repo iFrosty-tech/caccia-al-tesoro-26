@@ -35,5 +35,7 @@ ask-on-risk (forecast ~400 authored lines)
 - Test-first exception: no test runner in the repo (static site); checks are syntax, detector and browser inspection.
 - Engram mirror: PENDING (the Engram hook refused host session registration in this session; resync when available).
 
+- Work-unit commit 8467521 on `feat/crystal-loader`. RDD assess: medium, review due (slice budget reached, 724 lines); consent envelope relayed, user chose "Salta questa volta" (declined, candidate-scoped). Merged into `main` and pushed on the user's request (2026-10-22).
+
 ## Next step
-T1 writer.
+Done. Watch the first real download on a phone (touch inertia feel, MSE path on p5).
