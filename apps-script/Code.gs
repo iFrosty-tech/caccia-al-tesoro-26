@@ -60,7 +60,8 @@ var TIMED_PUZZLES = {
 // Riddles released by the organizer's tick in the Unlocks sheet; the key is in Script Properties.
 var FLAG_PUZZLES = {
   p3: { keyProperty: 'MEDIA_KEY_p3' },
-  p4: { keyProperty: 'MEDIA_KEY_p4' }
+  p4: { keyProperty: 'MEDIA_KEY_p4' },
+  p5: { keyProperty: 'MEDIA_KEY_p5' }
 };
 var UNLOCKS_SHEET = 'Unlocks';
 

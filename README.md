@@ -164,6 +164,15 @@ In [`puzzles.json`](puzzles.json) la protezione si attiva con due campi:
 
 > **Limiti, onestamente:** sono solo deterrenti. Per riprodurre un video il browser deve decifrarlo, quindi un giocatore determinato può comunque registrare lo schermo, fotografarlo, o prendere chiave e file cifrato dalla scheda Rete degli strumenti per sviluppatori. Il controllo degli strumenti per sviluppatori è una stima (finestra e pagina di dimensioni diverse): uno zoom del browser diverso dal 100% può farlo scattare, e non funziona se gli strumenti sono aperti in una finestra separata. Su iPhone, a schermo intero, il video passa al lettore di sistema e la filigrana non si vede.
 
+### Enigma 5 (video a segnale, tema "ombre cinesi")
+
+L'enigma 5 funziona come l'enigma 3 (sigillato finché non spunti la sua casella), con il lettore video normale, senza protezione. Il file `video/enigma-5.enc` è già cifrato nel repository; la chiave **non** c'è e va solo nelle proprietà dello script. `"theme": "ombre"` veste la sua pagina da teatro di ombre cinesi, come il video.
+
+1. In Apps Script aggiungi la proprietà dello script `MEDIA_KEY_p5` con la chiave dell'enigma 5.
+2. `Code.gs` ha già `p5` in `FLAG_PUZZLES`: copia il file aggiornato nell'editor e ripubblica come **nuova versione dello stesso deployment** (sezione 5).
+3. Nell'editor Apps Script esegui di nuovo **`setupUnlocks`**: aggiunge la riga `p5` con la casella **non spuntata** (le righe esistenti e le loro spunte restano come sono).
+4. Fai push di `video/enigma-5.enc` e di `puzzles.json`. Quando vuoi aprire l'enigma, spunta la casella `unlocked` della riga `p5` nel foglio **`Unlocks`**.
+
 ### Pagina nascosta `/periodica/` (immagine cifrata)
 
 La pagina [`periodica/`](periodica/index.html) mostra un'immagine solo a chi ha fatto l'accesso al sito; non è collegata da nessuna parte e chiede ai motori di ricerca di non indicizzarla (`noindex`). Chi non ha una sessione vede un invito ad accedere dalla pagina principale.

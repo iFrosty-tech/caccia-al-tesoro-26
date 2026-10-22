@@ -30,5 +30,13 @@
     "protect": true,
     "gate": "flag",
     "theme": "tarot"
+  },
+  {
+    "id": "p5",
+    "title": "Enigma 5",
+    "text": "La soluzione al quinto enigma è:",
+    "video": "video/enigma-5.enc",
+    "gate": "flag",
+    "theme": "ombre"
   }
 ]
