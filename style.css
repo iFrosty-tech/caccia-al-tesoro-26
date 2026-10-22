@@ -1866,6 +1866,40 @@ input[aria-invalid="true"]:focus {
   font-variant-numeric: tabular-nums;
 }
 
+/* The video download: a faceted crystal (crystal.js) filling with light, to spin while waiting.
+   The canvas draws its own glow; the wrapper only centres it and keeps touches to itself. */
+.reveal-loader:has(.reveal-crystal) {
+  text-align: center;
+}
+
+.reveal-crystal {
+  display: flex;
+  justify-content: center;
+  margin: 6px auto 2px;
+}
+
+.reveal-crystal .crystal-canvas {
+  display: block;
+  width: clamp(168px, 52vw, 220px);
+  height: clamp(168px, 52vw, 220px);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reveal-crystal .crystal-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.reveal-hint {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 .reveal-message {
   margin-top: 8px;
   font-size: 0.95rem;
@@ -2663,8 +2697,9 @@ body[data-theme="tarot"] .reveal-seal {
   text-align: center;
 }
 
+/* The emblem heads the seal and the plain loader; a loader holding the crystal has its own light. */
 body[data-theme="tarot"] .reveal-seal::before,
-body[data-theme="tarot"] .puzzle:has(> .reveal:not(.is-revealed)) .reveal-loader::before {
+body[data-theme="tarot"] .puzzle:has(> .reveal:not(.is-revealed)) .reveal-loader:not(:has(.reveal-crystal))::before {
   content: "";
   display: block;
   width: clamp(112px, 38vw, 148px);

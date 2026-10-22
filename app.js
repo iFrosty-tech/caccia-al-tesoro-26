@@ -1374,15 +1374,20 @@
     return Boolean(window.crypto && crypto.subtle && typeof URL.createObjectURL === "function");
   }
 
-  // Download progress: a title, a wake of light filling up, and the amount received.
-  function progressMeter(label) {
+  // Download progress: a title, a wake of light filling up, and the amount received. With
+  // `options.crystal` the wake becomes a faceted crystal (crystal.js) that fills with light and
+  // can be spun while waiting; the progressbar semantics and the text stay the same. The crystal
+  // is mounted the first time progress is shown and dropped by `destroy`, so a retry mounts a
+  // fresh one. `setPhase` and `finish` do nothing for the plain bar.
+  function progressMeter(label, options) {
+    const crystal = Boolean(options && options.crystal);
     const box = document.createElement("div");
     box.className = "reveal-loader";
     box.hidden = true;
     const title = document.createElement("p");
     title.className = "reveal-loader-title";
     const bar = document.createElement("div");
-    bar.className = "reveal-bar";
+    bar.className = crystal ? "reveal-crystal" : "reveal-bar";
     bar.setAttribute("role", "progressbar");
     bar.setAttribute("aria-label", label);
     bar.setAttribute("aria-valuemin", "0");
@@ -1390,6 +1395,22 @@
     const amount = document.createElement("p");
     amount.className = "reveal-amount";
     box.append(title, bar, amount);
+    if (crystal) {
+      // The phase ("affiorando", "decifratura") is read out when it changes.
+      title.setAttribute("aria-live", "polite");
+      const hint = document.createElement("p");
+      hint.className = "reveal-hint";
+      hint.textContent = "Trascina il cristallo mentre aspetti";
+      box.append(hint);
+    }
+
+    let controller = null;
+
+    function gem() {
+      if (!crystal) return null;
+      if (!controller && window.Crystal && typeof window.Crystal.mount === "function") controller = window.Crystal.mount(bar);
+      return controller;
+    }
 
     function show(received, total) {
       if (total > 0) {
@@ -1403,8 +1424,26 @@
         bar.removeAttribute("aria-valuenow");
         amount.textContent = formatMegabytes(received) + " MB";
       }
+      const live = gem();
+      if (live) live.setProgress(total > 0 ? Math.min(1, received / total) : null);
     }
-    return { box: box, title: title, show: show };
+
+    function setPhase(phase) {
+      const live = gem();
+      if (live) live.setPhase(phase);
+    }
+
+    function finish() {
+      return controller ? controller.finish() : Promise.resolve();
+    }
+
+    function destroy() {
+      if (!controller) return;
+      controller.destroy();
+      controller = null;
+    }
+
+    return { box: box, title: title, show: show, setPhase: setPhase, finish: finish, destroy: destroy };
   }
 
   // A file to keep: fetched and decrypted only when asked for, then handed to the browser as a
@@ -1535,7 +1574,7 @@
       clock.setAttribute("role", "timer");
     }
 
-    const meter = progressMeter("Download del video");
+    const meter = progressMeter("Download del video", { crystal: true });
     const loader = meter.box;
     const loaderTitle = meter.title;
     const showProgress = meter.show;
@@ -1574,6 +1613,7 @@
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
       abort.abort();
+      meter.destroy();
       if (video) {
         video.pause();
         video.removeAttribute("src");
@@ -1745,6 +1785,7 @@
       }
       loader.hidden = false;
       loaderTitle.textContent = "Il video sta affiorando…";
+      meter.setPhase("download");
       showProgress(0, 0);
 
       let bytes;
@@ -1753,24 +1794,31 @@
       } catch (_) {
         if (!alive()) return;
         loader.hidden = true;
+        meter.destroy();
         showProblem("Download del video non riuscito. Controlla la rete e riprova.", () => loadVideo(keyBase64));
         return;
       }
       if (!alive()) return;
 
       loaderTitle.textContent = "Decifratura in corso…";
+      meter.setPhase("decrypt");
       let plain;
       try {
         plain = await decryptMedia(bytes, keyBase64);
       } catch (_) {
         if (!alive()) return;
         loader.hidden = true;
+        meter.destroy();
         showProblem("Impossibile aprire il video: la chiave non corrisponde. Avvisa l'organizzatore.", requestKey);
         return;
       }
       if (!alive()) return;
       bytes = null;
+      // The crystal cracks open before the video takes its place.
+      await meter.finish();
+      if (!alive()) return;
       loader.hidden = true;
+      meter.destroy();
 
       // A protected riddle streams through MSE where it can; elsewhere (or if MSE gives up
       // before playing) the whole file becomes a blob URL, as for the other riddles.
