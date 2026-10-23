@@ -194,6 +194,7 @@
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const SEEK_STEP = 5; // seconds per arrow key press
+  const SEEK_THUMB = 14; // px, the seek thumb's width in style.css
   const NO_TIME = "–:––";
   const START_WINDOW = 0.5; // seconds: a play this close to 0 counts as starting the track
 
@@ -400,6 +401,56 @@
       seekTo(Number(seek.value));
     });
 
+    // Fingers and the mouse scrub on the whole bar: a tap jumps there, a sideways drag follows
+    // and seeks on release. The range itself takes no pointers (style.css): on iPhone it only
+    // moves when its small thumb is caught exactly, never on a tap. It still carries the
+    // keyboard and screen readers.
+    let dragId = null;
+
+    // The time under a pointer: the thumb's centre runs from half a thumb in at each end.
+    function timeAt(clientX) {
+      const rect = seek.getBoundingClientRect();
+      const run = rect.width - SEEK_THUMB;
+      const ratio = run > 0 ? (clientX - rect.left - SEEK_THUMB / 2) / run : 0;
+      return Math.max(0, Math.min(1, ratio)) * (media.duration || 0);
+    }
+
+    function endScrub() {
+      dragId = null;
+      scrubbing = false;
+      bar.classList.remove("is-scrubbing");
+    }
+
+    bar.addEventListener("pointerdown", (event) => {
+      if (seek.disabled || dragId !== null || !event.isPrimary || event.button > 0) return;
+      dragId = event.pointerId;
+      try {
+        bar.setPointerCapture(dragId);
+      } catch (_) {
+        // Pointer already gone: its pointerup or pointercancel still ends the scrub.
+      }
+      scrubbing = true;
+      bar.classList.add("is-scrubbing");
+      showPosition(timeAt(event.clientX));
+    });
+
+    bar.addEventListener("pointermove", (event) => {
+      if (event.pointerId === dragId) showPosition(timeAt(event.clientX));
+    });
+
+    bar.addEventListener("pointerup", (event) => {
+      if (event.pointerId !== dragId) return;
+      endScrub();
+      seekTo(timeAt(event.clientX));
+    });
+
+    // The browser took the touch for a scroll: the bar goes back to the playhead.
+    bar.addEventListener("pointercancel", (event) => {
+      if (event.pointerId !== dragId) return;
+      endScrub();
+      showPosition(media.currentTime);
+    });
+
     // Arrow keys jump a few seconds: one-second steps are too fine for a long track.
     seek.addEventListener("keydown", (event) => {
       const direction = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
@@ -509,6 +560,76 @@
     track.append(wake.bar, wake.time);
     player.append(audio, control.orb, track, message);
     return player;
+  }
+
+  // ---------- Video position memory ----------
+
+  // Where each riddle video was left, by riddle id: after a reload (or the phone dropping the
+  // page while another app was open) the video picks up there instead of from the top.
+  const POSITIONS_KEY = "caccia-al-tesoro-positions";
+  const RESUME_MARGIN = 3; // seconds: this close to either end, the video starts from the top
+  const POSITION_EVERY = 2; // seconds of playback between two saves
+
+  function loadPositions() {
+    try {
+      const positions = JSON.parse(localStorage.getItem(POSITIONS_KEY) || "{}");
+      if (positions && typeof positions === "object") return positions;
+    } catch (_) {
+      // Unreadable: nothing to resume.
+    }
+    return {};
+  }
+
+  function storePosition(id, seconds) {
+    try {
+      const positions = loadPositions();
+      if (seconds >= RESUME_MARGIN) positions[id] = Math.floor(seconds);
+      else delete positions[id];
+      localStorage.setItem(POSITIONS_KEY, JSON.stringify(positions));
+    } catch (_) {
+      // Storage unavailable: the video starts from the top next time.
+    }
+  }
+
+  // Saves the position of `video` while it plays, when it stops, when the page hides and when
+  // the view is left; the end clears it. Returns the position to resume from (0: the top).
+  function rememberPosition(video, id) {
+    const resumeAt = Number(loadPositions()[id]) || 0;
+    let last = resumeAt;
+    let written = resumeAt;
+
+    // Leaving drops the source and rewinds: those late events are not where the player stopped.
+    function track() {
+      if (!video.getAttribute("src") || video.readyState < HTMLMediaElement.HAVE_METADATA) return false;
+      last = video.ended ? 0 : video.currentTime;
+      return true;
+    }
+
+    function write() {
+      written = last;
+      storePosition(id, last);
+    }
+
+    video.addEventListener("timeupdate", () => {
+      if (track() && Math.abs(last - written) >= POSITION_EVERY) write();
+    });
+    ["pause", "seeked", "ended"].forEach((type) => {
+      video.addEventListener(type, () => {
+        if (track()) write();
+      });
+    });
+
+    function onHide() {
+      if (document.hidden) write();
+    }
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", write);
+    onLeave(() => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", write);
+      write();
+    });
+    return resumeAt;
   }
 
   // ---------- Video player ----------
@@ -1345,15 +1466,26 @@
       return whole;
     }
     const reader = res.body.getReader();
+    // Size known: the chunks go straight into one buffer, so the file is never held twice
+    // (a phone short of memory reloads the page).
+    let filled = total > 0 ? new Uint8Array(total) : null;
     const chunks = [];
     let received = 0;
     for (;;) {
       const step = await reader.read();
       if (step.done) break;
-      chunks.push(step.value);
-      received += step.value.length;
+      const chunk = step.value;
+      if (filled && received + chunk.length > filled.length) {
+        // Longer than announced: on in pieces.
+        chunks.push(filled.subarray(0, received));
+        filled = null;
+      }
+      if (filled) filled.set(chunk, received);
+      else chunks.push(chunk);
+      received += chunk.length;
       onProgress(received, total);
     }
+    if (filled) return received === filled.length ? filled : filled.subarray(0, received);
     const bytes = new Uint8Array(received);
     let offset = 0;
     chunks.forEach((chunk) => {
@@ -1804,7 +1936,10 @@
       meter.setPhase("decrypt");
       let plain;
       try {
-        plain = await decryptMedia(bytes, keyBase64);
+        const opening = decryptMedia(bytes, keyBase64);
+        // WebCrypto decrypts a copy of its own: the download can go as soon as it is handed over.
+        bytes = null;
+        plain = await opening;
       } catch (_) {
         if (!alive()) return;
         loader.hidden = true;
@@ -1813,7 +1948,6 @@
         return;
       }
       if (!alive()) return;
-      bytes = null;
       // The crystal cracks open before the video takes its place.
       await meter.finish();
       if (!alive()) return;
@@ -1848,13 +1982,17 @@
 
     function mountVideo(objectUrl) {
       // No "#t=" fragment on the blob URL: older iOS WebKit fails to resolve it and refuses the
-      // source. A tiny seek after the metadata paints the first frame instead of a black box.
+      // source. After the metadata, a seek to where the player left off (or a tiny one) paints
+      // that frame instead of a black box.
       const player = renderVideoPlayer(objectUrl, title, Boolean(guard));
       const frame = player.querySelector(".video-frame");
       video = player.querySelector("video");
       if (guard) guard.attach(player, video);
+      const resumeAt = rememberPosition(video, id);
       video.addEventListener("loadedmetadata", () => {
-        if (video.paused && video.currentTime === 0) video.currentTime = 0.001;
+        if (!video.paused || video.currentTime !== 0) return;
+        const resume = resumeAt >= RESUME_MARGIN && resumeAt < video.duration - RESUME_MARGIN;
+        video.currentTime = resume ? resumeAt : 0.001;
       }, { once: true });
       video.addEventListener("error", () => {
         // Ignore the error caused by leaving the page and dropping the source.

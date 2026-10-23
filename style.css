@@ -1543,12 +1543,24 @@ input[aria-invalid="true"]:focus {
   box-shadow: none;
 }
 
+/* The bar takes the pointers (app.js scrubs on it): a tap anywhere seeks, a sideways drag
+   scrubs, an upward or downward swipe still scrolls the page. */
 .wake-bar {
   --progress: 0%;
   position: relative;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* The range stays 44px tall for touch; only a 3px wake is drawn inside it. */
+.wake-bar:has(> .wake-seek:disabled) {
+  cursor: default;
+}
+
+/* The range stays 44px tall for touch; only a 3px wake is drawn inside it. It takes no
+   pointers itself (iPhone only drags its thumb), only the keyboard and screen readers. */
 .wake-seek {
   --wake-fill: linear-gradient(90deg, var(--wake-bright), var(--light));
   display: block;
@@ -1556,14 +1568,9 @@ input[aria-invalid="true"]:focus {
   height: 44px;
   margin: 0;
   background: transparent;
-  cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  touch-action: pan-y;
-}
-
-.wake-seek:disabled {
-  cursor: default;
+  pointer-events: none;
 }
 
 .wake-seek:focus-visible {
@@ -1616,11 +1623,11 @@ input[aria-invalid="true"]:focus {
   transition: box-shadow 0.3s var(--ease-out), transform 0.25s var(--ease-out);
 }
 
-.wake-seek:active::-webkit-slider-thumb {
+.wake-bar.is-scrubbing .wake-seek::-webkit-slider-thumb {
   transform: scale(1.25);
 }
 
-.wake-seek:active::-moz-range-thumb {
+.wake-bar.is-scrubbing .wake-seek::-moz-range-thumb {
   transform: scale(1.25);
 }
 
@@ -1767,6 +1774,13 @@ input[aria-invalid="true"]:focus {
 }
 
 /* ---------- Timed riddle: countdown, then the video surfaces ---------- */
+
+/* A file on its way or a video on the page: a pull down at the top must not reload the page
+   (the download would start over). On both elements: browsers differ on which one sets it. */
+html:has(.reveal-loader:not([hidden]), .video-player),
+html:has(.reveal-loader:not([hidden]), .video-player) body {
+  overscroll-behavior-y: none;
+}
 
 .reveal {
   margin-bottom: 24px;

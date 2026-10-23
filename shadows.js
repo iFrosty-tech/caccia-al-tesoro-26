@@ -3,7 +3,9 @@
 // of hard black silhouettes (a town, a church, the puppeteer's hand) and the lamp's halo. The
 // lamp follows the phone's tilt (or the pointer on a desk) and the page reads its position from
 // two custom properties on body, --ombre-tx and --ombre-ty (about -1..1): style.css slides each
-// layer by its depth and leans the card. Nothing here moves under prefers-reduced-motion.
+// layer by its depth and leans the card. While a video plays the lamp settles in the middle and
+// stops, so the picture holds still and no frame is spent on it. Nothing here moves under
+// prefers-reduced-motion.
 
 (function () {
   "use strict";
@@ -20,6 +22,7 @@
   let rafId = 0;
   let lastInput = 0;
   let orientationBase = null;
+  let still = false; // a video is playing
   const target = { x: 0, y: 0 };
   const current = { x: 0, y: 0 };
   // Listeners added for the current stage, removed together on unmount.
@@ -150,6 +153,7 @@
     cancelAnimationFrame(rafId);
     rafId = 0;
     orientationBase = null;
+    still = false;
     target.x = target.y = current.x = current.y = 0;
     document.body.style.removeProperty("--ombre-tx");
     document.body.style.removeProperty("--ombre-ty");
@@ -169,29 +173,44 @@
   }
 
   function aim(x, y) {
+    if (still) return;
     target.x = clamp(x);
     target.y = clamp(y);
     lastInput = performance.now();
     if (!rafId) rafId = requestAnimationFrame(frame);
   }
 
-  // One frame: ease towards the target, or sway slowly when nobody has moved for a while.
+  // One frame: ease towards the target, or sway slowly when nobody has moved for a while. With
+  // a video playing the target is the middle, and once there the frames stop.
   function frame(now) {
     rafId = 0;
     if (!stage || document.hidden) return;
-    if (now - lastInput > IDLE_AFTER) {
+    if (still) {
+      target.x = target.y = 0;
+    } else if (now - lastInput > IDLE_AFTER) {
       target.x = Math.sin(now / 4000) * 0.22;
       target.y = Math.cos(now / 5200) * 0.14;
     }
     current.x += (target.x - current.x) * EASE;
     current.y += (target.y - current.y) * EASE;
+    const settled = still && Math.abs(current.x) < 0.001 && Math.abs(current.y) < 0.001;
+    if (settled) current.x = current.y = 0;
     document.body.style.setProperty("--ombre-tx", current.x.toFixed(4));
     document.body.style.setProperty("--ombre-ty", current.y.toFixed(4));
-    rafId = requestAnimationFrame(frame);
+    if (!settled) rafId = requestAnimationFrame(frame);
+  }
+
+  // Media events do not bubble: they are caught on their way down.
+  function onMedia(event) {
+    if (!(event.target instanceof HTMLVideoElement)) return;
+    still = event.type === "play";
+    lastInput = performance.now();
+    if (!rafId && !document.hidden) rafId = requestAnimationFrame(frame);
   }
 
   function startLamp() {
     lastInput = performance.now();
+    ["play", "pause", "ended", "emptied"].forEach((type) => listen(document, type, onMedia, true));
     listen(document, "visibilitychange", () => {
       if (document.hidden) {
         cancelAnimationFrame(rafId);
