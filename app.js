@@ -654,7 +654,8 @@
   // The audio player's twin over a <video>: a veil and a big orb rest on the picture while it
   // is still, the orb and wake sit below it (over it in fullscreen). `protect`: a riddle that
   // asks for the deterrents ("protect": true) also turns off download, PiP and casting.
-  function renderVideoPlayer(src, title, protect) {
+  // `streamed`: the source is a MediaSource, which turns off casting.
+  function renderVideoPlayer(src, title, protect, streamed) {
     const player = document.createElement("div");
     player.className = "video-player";
     player.setAttribute("role", "group");
@@ -666,11 +667,13 @@
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.preload = "auto";
-    if (protect) {
+    if (protect || streamed) {
       // Before the source: a ManagedMediaSource (iPhone) only opens with remote playback off.
-      player.classList.add("is-protected");
       video.disableRemotePlayback = true;
       video.setAttribute("disableremoteplayback", "");
+    }
+    if (protect) {
+      player.classList.add("is-protected");
       video.disablePictureInPicture = true;
       video.setAttribute("disablepictureinpicture", "");
       video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
@@ -1026,10 +1029,13 @@
   }
 
   // Plays decrypted bytes through Media Source Extensions: the video's source is a MediaSource
-  // (revoked as soon as it opens), fed chunk by chunk, never a URL of the file. null when this
-  // browser or this file cannot. `onFail(bytes)` hands the bytes back if MSE gives up before the
-  // first append, for the blob fallback. ManagedMediaSource (iPhone) may evict data whenever it
-  // likes, so its bytes stay for the life of the page; elsewhere they go once everything fits.
+  // (revoked as soon as it opens), fed chunk by chunk, never a URL of the file. The page decides
+  // what is buffered, so a seek anywhere works (a blob URL on iPhone only seeks within what it
+  // has loaded). null when this browser or this file cannot. Once indexed, the bytes move into a
+  // Blob, which the browser keeps outside the page's memory, and each chunk is read back from it
+  // when appended. `onFail(file)` hands the Blob over if MSE gives up before the first append,
+  // for the blob fallback. ManagedMediaSource (iPhone) may evict data whenever it likes, so the
+  // file stays for the life of the page; elsewhere it goes once everything fits.
   function createStream(bytes, type, onFail) {
     const Source = window.ManagedMediaSource || window.MediaSource;
     if (!Source || typeof Source.isTypeSupported !== "function" || !Source.isTypeSupported(type)) return null;
@@ -1042,6 +1048,8 @@
     } catch (_) {
       return null;
     }
+    let file = new Blob([bytes], { type: "video/mp4" });
+    bytes = null;
     const url = URL.createObjectURL(source);
     const chunks = index.chunks;
     const appended = chunks.map(() => false);
@@ -1052,6 +1060,7 @@
     let streaming = true; // ManagedMediaSource says when it wants data
     let waitRoom = false; // the buffer is full ahead of the playhead
     let quotaHit = false; // the browser cannot hold the whole file
+    let reading = false; // a chunk is on its way out of the file
     let closed = false;
     let openTimer = 0;
 
@@ -1059,15 +1068,35 @@
       if (closed) return;
       closed = true;
       clearTimeout(openTimer);
-      bytes = null;
+      file = null;
       URL.revokeObjectURL(url);
     }
 
     function fail() {
       if (closed || started) return;
-      const rest = bytes;
+      const rest = file;
       stop();
       onFail(rest);
+    }
+
+    // Bytes [from, to) of the file, then `append` them unless the stream closed meanwhile. A
+    // buffer still busy (a removal) is left alone: its updateend pumps again.
+    function readThen(from, to, append) {
+      reading = true;
+      new Response(file.slice(from, to)).arrayBuffer().then(
+        (data) => {
+          reading = false;
+          if (closed || buffer.updating) return;
+          append(data);
+        },
+        () => {
+          reading = false;
+          // Unreadable: before the first append the blob fallback takes over; after it the
+          // element stalls and its own handlers tell the player.
+          fail();
+          stop();
+        }
+      );
     }
 
     function isBuffered(time) {
@@ -1134,26 +1163,31 @@
       } catch (_) {
         return;
       }
-      // Everything is in, and only an append makes these browsers evict: the bytes can go.
-      if (!managed && !quotaHit && appended.every(Boolean)) bytes = null;
+      // Everything is in, and only an append makes these browsers evict: the file can go.
+      if (!managed && !quotaHit && appended.every(Boolean)) file = null;
     }
 
     function pump() {
-      if (closed || !bytes || !buffer || buffer.updating || !streaming || waitRoom) return;
+      if (closed || !file || !buffer || buffer.updating || reading || waitRoom) return;
+      // ManagedMediaSource says when it wants data, but a playhead with nothing under it (a
+      // seek) always gets its chunk.
+      if (!streaming && isBuffered(video.currentTime)) return;
       const next = nextChunk();
       if (next < 0) {
         finish();
         return;
       }
       const chunk = chunks[next];
-      try {
-        buffer.appendBuffer(new Uint8Array(bytes, chunk.from, chunk.to - chunk.from));
-        appended[next] = true;
-        tries[next]++;
-      } catch (err) {
-        if (err && err.name === "QuotaExceededError") makeRoom();
-        else stop(); // the element failed: its own error handler tells the player
-      }
+      readThen(chunk.from, chunk.to, (data) => {
+        try {
+          buffer.appendBuffer(data);
+          appended[next] = true;
+          tries[next]++;
+        } catch (err) {
+          if (err && err.name === "QuotaExceededError") makeRoom();
+          else stop(); // the element failed: its own error handler tells the player
+        }
+      });
     }
 
     function onOpen() {
@@ -1178,11 +1212,13 @@
         pump();
       });
       buffer.addEventListener("bufferedchange", pump); // ManagedSourceBuffer evicted something
-      try {
-        buffer.appendBuffer(new Uint8Array(bytes, 0, index.initEnd));
-      } catch (_) {
-        fail();
-      }
+      readThen(0, index.initEnd, (data) => {
+        try {
+          buffer.appendBuffer(data);
+        } catch (_) {
+          fail();
+        }
+      });
     }
 
     function start(element) {
@@ -1954,37 +1990,40 @@
       loader.hidden = true;
       meter.destroy();
 
-      // A protected riddle streams through MSE where it can; elsewhere (or if MSE gives up
-      // before playing) the whole file becomes a blob URL, as for the other riddles.
+      // A riddle with "videoType" (a fragmented MP4) streams through MSE where it can, so it
+      // seeks anywhere (iPhone included) and a protected one never has a URL of the whole file;
+      // elsewhere (or if MSE gives up before playing) the whole file becomes a blob URL.
       const type = optionalText(puzzle.videoType);
-      const stream = guard && type ? createStream(plain, type, playBlob) : null;
+      const stream = type ? createStream(plain, type, playBlob) : null;
       if (stream) {
         onLeave(stream.stop);
-        mountVideo(stream.url);
+        mountVideo(stream.url, true);
         stream.start(video);
       } else {
-        mountVideo(blobUrl(plain));
+        mountVideo(blobUrl(plain), false);
       }
       plain = null;
       openRiddle(keyBase64);
     }
 
-    function blobUrl(plain) {
-      const objectUrl = URL.createObjectURL(new Blob([plain], { type: "video/mp4" }));
+    function blobUrl(media) {
+      const file = media instanceof Blob ? media : new Blob([media], { type: "video/mp4" });
+      const objectUrl = URL.createObjectURL(file);
       keepUrl(objectUrl);
       return objectUrl;
     }
 
-    function playBlob(plain) {
-      if (!alive() || !video || !plain) return;
-      video.src = blobUrl(plain);
+    function playBlob(file) {
+      if (!alive() || !video || !file) return;
+      video.src = blobUrl(file);
     }
 
-    function mountVideo(objectUrl) {
+    // `streamed`: the source is a MediaSource.
+    function mountVideo(objectUrl, streamed) {
       // No "#t=" fragment on the blob URL: older iOS WebKit fails to resolve it and refuses the
       // source. After the metadata, a seek to where the player left off (or a tiny one) paints
       // that frame instead of a black box.
-      const player = renderVideoPlayer(objectUrl, title, Boolean(guard));
+      const player = renderVideoPlayer(objectUrl, title, Boolean(guard), streamed);
       const frame = player.querySelector(".video-frame");
       video = player.querySelector("video");
       if (guard) guard.attach(player, video);
