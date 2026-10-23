@@ -101,6 +101,19 @@ Il video viene scaricato per intero prima di partire: tienilo leggero (un MP4 H.
 
 Il sito ricorda sul dispositivo del giocatore il punto in cui il video si è fermato: se la pagina si ricarica (il telefono a corto di memoria la chiude mentre si usa un'altra app, oppure il giocatore torna all'enigma più tardi), il video si riscarica e riparte da lì invece che dall'inizio. Visto fino alla fine, la volta dopo ricomincia da capo. Con un video sulla pagina il gesto "trascina giù per ricaricare" è disattivato, così non si perde il download per sbaglio.
 
+**Per spostarsi ovunque con la barra, anche su iPhone**, pubblica il video come **MP4 frammentato** e scrivi i suoi codec in `videoType`: il sito lo riproduce a pezzi (Media Source Extensions) e carica da solo il punto scelto. Con un MP4 normale Safari su iPhone salta solo dentro la parte già caricata e ignora i salti più avanti. La conversione non ricodifica (nessuna perdita di qualità); poi cifra il file frammentato come sopra:
+
+```sh
+ffmpeg -i video.mp4 -c copy -movflags frag_keyframe+empty_moov+default_base_moof video-frag.mp4
+ffprobe -v error -show_entries stream=codec_name,profile,level video-frag.mp4
+```
+
+```json
+{ "id": "p2", "video": "video/enigma-2.enc", "videoType": "video/mp4; codecs=\"avc1.640028, mp4a.40.2\"" }
+```
+
+In `avc1.PPCCLL` il profilo è `64` per High, `4D` per Main, `42` per Baseline, e il livello è in esadecimale (`1F` = 3.1, `28` = 4.0, `32` = 5.0); `mp4a.40.2` è l'audio AAC. I browser senza Media Source Extensions (iPhone con iOS precedente al 17.1) riproducono il file intero come prima.
+
 ### Enigmi a segnale (si aprono con una spunta nel foglio)
 
 Un enigma può anche restare **sigillato finché non lo apri tu**, durante la caccia, mettendo una spunta nel Google Sheet. Il giocatore vede la scritta *Sigillato* (nessun conto alla rovescia); la pagina ricontrolla da sola ogni 30 secondi (e subito con **Controlla ora**) e si apre senza ricaricare appena la spunta c'è. Come per gli enigmi a tempo, i file sono pubblicati **solo cifrati** e il backend consegna la chiave (e accetta risposte) solo con la spunta messa.
@@ -162,7 +175,7 @@ In [`puzzles.json`](puzzles.json) la protezione si attiva con due campi:
 ```
 
 - `protect: true` attiva i deterrenti sulla sola pagina dell'enigma: niente menu del tasto destro, trascinamento o selezione sul video; download, picture-in-picture e trasmissione ad altri dispositivi disattivati; scorciatoie per gli strumenti per sviluppatori, salva, stampa e sorgente bloccate; il nome del giocatore in filigrana sul video; il video si mette in pausa e si copre quando la pagina va in secondo piano o (su computer) quando gli strumenti per sviluppatori sembrano aperti.
-- `videoType` permette di riprodurre il video con Media Source Extensions, senza un indirizzo `blob:` del file intero da aprire o salvare. Il file deve essere un **MP4 frammentato** (per esempio `ffmpeg -i in.mp4 -c copy -movflags frag_keyframe+empty_moov+default_base_moof out.mp4`, poi cifrato con `tools/encrypt-media.mjs`) e i codec in `videoType` devono corrispondere a quelli del file. I browser senza Media Source Extensions (per esempio iPhone con iOS precedente al 17.1) riproducono il video nel modo normale.
+- `videoType` (lo stesso di sopra, vale per tutti gli enigmi) qui ha un effetto in più: il video passa da Media Source Extensions senza un indirizzo `blob:` del file intero da aprire o salvare. Il file deve essere un **MP4 frammentato** (per esempio `ffmpeg -i in.mp4 -c copy -movflags frag_keyframe+empty_moov+default_base_moof out.mp4`, poi cifrato con `tools/encrypt-media.mjs`) e i codec in `videoType` devono corrispondere a quelli del file. I browser senza Media Source Extensions (per esempio iPhone con iOS precedente al 17.1) riproducono il video nel modo normale.
 
 > **Limiti, onestamente:** sono solo deterrenti. Per riprodurre un video il browser deve decifrarlo, quindi un giocatore determinato può comunque registrare lo schermo, fotografarlo, o prendere chiave e file cifrato dalla scheda Rete degli strumenti per sviluppatori. Il controllo degli strumenti per sviluppatori è una stima (finestra e pagina di dimensioni diverse): uno zoom del browser diverso dal 100% può farlo scattare, e non funziona se gli strumenti sono aperti in una finestra separata. Su iPhone, a schermo intero, il video passa al lettore di sistema e la filigrana non si vede.
 
