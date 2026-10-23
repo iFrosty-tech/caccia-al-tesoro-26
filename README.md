@@ -99,6 +99,8 @@ Un enigma può comparire subito sul sito ma aprirsi solo a un'ora precisa: fino 
 
 Il video viene scaricato per intero prima di partire: tienilo leggero (un MP4 H.264 da qualche decina di MB va bene; GitHub rifiuta file oltre 100 MB).
 
+Il sito ricorda sul dispositivo del giocatore il punto in cui il video si è fermato: se la pagina si ricarica (il telefono a corto di memoria la chiude mentre si usa un'altra app, oppure il giocatore torna all'enigma più tardi), il video si riscarica e riparte da lì invece che dall'inizio. Visto fino alla fine, la volta dopo ricomincia da capo. Con un video sulla pagina il gesto "trascina giù per ricaricare" è disattivato, così non si perde il download per sbaglio.
+
 ### Enigmi a segnale (si aprono con una spunta nel foglio)
 
 Un enigma può anche restare **sigillato finché non lo apri tu**, durante la caccia, mettendo una spunta nel Google Sheet. Il giocatore vede la scritta *Sigillato* (nessun conto alla rovescia); la pagina ricontrolla da sola ogni 30 secondi (e subito con **Controlla ora**) e si apre senza ricaricare appena la spunta c'è. Come per gli enigmi a tempo, i file sono pubblicati **solo cifrati** e il backend consegna la chiave (e accetta risposte) solo con la spunta messa.
