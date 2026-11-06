@@ -1,0 +1,1194 @@
+/* Choreography of the Sottosopra: the neon sign warming up, the string lights (lights.js), the VHS
+   glitch of a view change, the tiles flickering on, the lights answering a save, the stamp of a
+   sealed riddle. Loaded after style.css, which holds every static end state: animations here use
+   backwards fills, so when they end the page is exactly what style.css draws (the only forwards
+   fills are the save chase, removed as it ends, and the stroke of the saved check).
+
+   Photosensitivity (WCAG 2.3.1): every sequence is counted so that no area flashes more than three
+   times in any second; the login entrance (sign + panel) has at most three changes of direction
+   per second in all. A bulb never restarts sooner than 340 ms (lights.js).
+
+   The rooms keep their own entrances: the glitch, the panel flicker and the coloured bulbs are
+   scoped away from tarot and ombre (the green sea keeps the Sottosopra structure, tinted). */
+
+/* ---------- The bulb: one number of light ---------- */
+
+/* How lit a bulb is: 0 dark glass, 1 lit, above 1 a surge. Registered so keyframes can animate
+   it; it inherits, so a wall cell lights its bulb and the letter painted under it at once. */
+@property --lamp {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Where @property is unknown the value must still exist (the bulbs then blink instead of fade). */
+:root {
+  --lamp: 0;
+}
+
+.lamp {
+  --lamp-size: 12px;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--lamp-size);
+  height: calc(var(--lamp-size) * 1.5);
+  transition: opacity 90ms linear;
+}
+
+/* The socket. */
+.lamp::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 56%;
+  height: 28%;
+  transform: translateX(-50%);
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(90deg, #171a24, #4a5164 45%, #171a24);
+}
+
+/* The glass, drawn from --lamp: at 0 the tinted glass of style.css, at 1 its lit bulb. The tile
+   lights take the same glass, so they can flicker on too. */
+.lamp::after,
+.tile-light::after,
+.tile.is-solved .tile-light::after {
+  content: "";
+  position: absolute;
+  top: 24%;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 1px solid rgba(var(--bulb-rgb, var(--bulb-red-rgb)), calc(0.42 + 0.5 * var(--lamp)));
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, calc(0.28 - 0.28 * var(--lamp))), transparent 34%),
+    radial-gradient(
+      circle at 50% 44%,
+      rgba(255, 255, 255, calc(0.95 * var(--lamp))) 0 13%,
+      rgba(var(--bulb-rgb, var(--bulb-red-rgb)), calc(0.22 + 0.78 * var(--lamp))) 54%,
+      rgba(var(--bulb-rgb, var(--bulb-red-rgb)), calc(0.08 + 0.82 * var(--lamp)))
+    );
+  box-shadow:
+    0 0 calc(6px * var(--lamp)) calc(1px * var(--lamp)) rgba(var(--bulb-rgb, var(--bulb-red-rgb)), calc(0.95 * var(--lamp))),
+    0 0 calc(18px * var(--lamp)) calc(5px * var(--lamp)) rgba(var(--bulb-rgb, var(--bulb-red-rgb)), calc(0.42 * var(--lamp)));
+  transition: none;
+}
+
+/* Lightning (upside.js sets data-storm on <html> for ~200 ms): the power dips, every bulb with it. */
+:root[data-storm="1"] .lamp,
+:root[data-storm="1"] .tile-light {
+  opacity: 0.5;
+}
+
+/* A typed letter: snaps on with a surge, then cools back to wherever it rests (dark, or warm).
+   Two identical copies, so a new flash restarts it by switching name. */
+@keyframes lamp-flash-a {
+  0% {
+    --lamp: 1.7;
+  }
+  18% {
+    --lamp: 1.3;
+  }
+}
+
+@keyframes lamp-flash-b {
+  0% {
+    --lamp: 1.7;
+  }
+  18% {
+    --lamp: 1.3;
+  }
+}
+
+/* A failing bulb: a weak strike, a drop, it catches for a moment and dies down (two flashes). */
+@keyframes lamp-flicker {
+  0% {
+    --lamp: 0;
+    animation-timing-function: steps(1, end);
+  }
+  10% {
+    --lamp: 0.75;
+    animation-timing-function: steps(1, end);
+  }
+  19% {
+    --lamp: 0.08;
+    animation-timing-function: steps(1, end);
+  }
+  34% {
+    --lamp: 1.05;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  100% {
+    --lamp: 0;
+  }
+}
+
+/* A slow glow, up and away: a bulb remembering it was lit. */
+@keyframes lamp-glow {
+  0%,
+  100% {
+    --lamp: 0;
+  }
+  45% {
+    --lamp: 0.5;
+  }
+  62% {
+    --lamp: 0.44;
+  }
+}
+
+/* The current passes through: on at once, then back to rest. */
+@keyframes lamp-chase {
+  0% {
+    --lamp: 1.25;
+  }
+  25% {
+    --lamp: 0.9;
+  }
+}
+
+/* Powering on: a strike, a drop, a surge, and it holds (one flash). */
+@keyframes lamp-on {
+  0% {
+    --lamp: 0;
+    animation-timing-function: steps(1, end);
+  }
+  14% {
+    --lamp: 0.9;
+    animation-timing-function: steps(1, end);
+  }
+  26% {
+    --lamp: 0.12;
+    animation-timing-function: steps(1, end);
+  }
+  42% {
+    --lamp: 1.45;
+    animation-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1);
+  }
+}
+
+/* The clue just collected: the same, with a bigger surge and a longer afterglow. */
+@keyframes lamp-on-fresh {
+  0% {
+    --lamp: 0;
+    animation-timing-function: steps(1, end);
+  }
+  12% {
+    --lamp: 1;
+    animation-timing-function: steps(1, end);
+  }
+  22% {
+    --lamp: 0.1;
+    animation-timing-function: steps(1, end);
+  }
+  36% {
+    --lamp: 2.3;
+    animation-timing-function: cubic-bezier(0.25, 0.6, 0.35, 1);
+  }
+}
+
+/* A lit bulb that once in a long while loses power for a blink (one flash). */
+@keyframes lamp-falter {
+  0%,
+  95% {
+    --lamp: 1;
+    animation-timing-function: steps(1, end);
+  }
+  95.6% {
+    --lamp: 0.2;
+    animation-timing-function: steps(1, end);
+  }
+  96.4% {
+    --lamp: 1;
+  }
+}
+
+/* ---------- Login: the sign warms up, its reflection surfaces, the panel flickers on ---------- */
+
+/* One timeline for the whole sign (1.6 s), so its flashes can be counted together: "Caccia"
+   strikes, drops and catches (0.18-0.36 s), "Tesoro" catches with it, the hot "al" comes on last
+   (0.86 s), and "Tesoro" stutters once more at 1.45 s, like a tube not quite warm. Unlit, the
+   tubes stay faintly visible as glass. Only opacity moves; the glow filter stays on .title-neon. */
+.js .title-neon .title-line {
+  will-change: opacity;
+}
+
+.js .title-neon .title-caccia {
+  animation: neon-caccia 1.6s steps(1, end) backwards;
+}
+
+.js .title-neon .title-tesoro {
+  animation: neon-tesoro 1.6s steps(1, end) backwards;
+}
+
+/* The hot "al" falters now and then for good (two blinks every 12.5 s). */
+.js .title-neon .title-al {
+  animation:
+    neon-al 1.6s steps(1, end) backwards,
+    neon-falter 12.5s steps(1, end) 4.2s infinite;
+}
+
+@keyframes neon-caccia {
+  0% {
+    opacity: 0.12;
+  }
+  11.25% {
+    opacity: 1;
+  }
+  15.6% {
+    opacity: 0.16;
+  }
+  22.5% {
+    opacity: 1;
+  }
+}
+
+@keyframes neon-tesoro {
+  0% {
+    opacity: 0.12;
+  }
+  22.5% {
+    opacity: 1;
+  }
+  90.6% {
+    opacity: 0.36;
+  }
+  95% {
+    opacity: 1;
+  }
+}
+
+@keyframes neon-al {
+  0% {
+    opacity: 0.1;
+  }
+  53.75% {
+    opacity: 1;
+  }
+}
+
+@keyframes neon-falter {
+  0%,
+  93% {
+    opacity: 1;
+  }
+  93.6% {
+    opacity: 0.25;
+  }
+  94.4% {
+    opacity: 1;
+  }
+  95.6% {
+    opacity: 0.55;
+  }
+  96.2% {
+    opacity: 1;
+  }
+}
+
+/* The horizon line lights from its middle once the first tube holds. */
+.js body:not(.is-playing) .title::after {
+  animation: horizon-on 1.2s var(--ease-out) 0.4s backwards;
+}
+
+@keyframes horizon-on {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+
+/* The reflection surfaces after the sign holds, then wavers like water, slowly, for good. Its
+   base transform (scaleY(-0.74), folded on the bottom edge) is kept in every frame. Its blur and
+   glow are rasterized once; only the layer moves. */
+.js body:not(.is-playing) .title-mirror {
+  will-change: transform, opacity;
+  animation:
+    mirror-rise 1.3s var(--ease-out) 0.55s backwards,
+    mirror-waver 8s ease-in-out 1.85s infinite;
+}
+
+@keyframes mirror-rise {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mirror-waver {
+  0%,
+  100% {
+    transform: scaleY(-0.74);
+  }
+  28% {
+    transform: scaleY(-0.732) skewX(1.4deg) translateX(-0.6px);
+  }
+  57% {
+    transform: scaleY(-0.75) skewX(-1deg) translateX(0.8px);
+  }
+  80% {
+    transform: scaleY(-0.737) skewX(0.6deg);
+  }
+}
+
+/* A lightning strike browns the sign out for a moment. */
+.title-neon,
+.title-mirror {
+  transition: opacity 90ms linear;
+}
+
+:root[data-storm="1"] body:not(.is-playing) .title-neon {
+  opacity: 0.62;
+}
+
+:root[data-storm="1"] body:not(.is-playing) .title-mirror {
+  opacity: 0.3;
+}
+
+/* Playing: the compact sign switches on with one stutter (a new animation name restarts it). */
+.js .is-playing .title-neon .title-line {
+  animation: neon-compact 0.6s steps(1, end) backwards;
+}
+
+@keyframes neon-compact {
+  0% {
+    opacity: 0.15;
+  }
+  20% {
+    opacity: 1;
+  }
+  34% {
+    opacity: 0.35;
+  }
+  52% {
+    opacity: 1;
+  }
+}
+
+/* The login panel flickers on once the sign holds: on, a drop, on (0.69-0.85 s). */
+.js #register-section {
+  animation: panel-on 0.5s steps(1, end) 0.6s backwards;
+}
+
+@keyframes panel-on {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  34% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------- The alphabet wall (lights.js) ---------- */
+
+/* The wire snakes behind the sockets: dark flex with a cold glint, its shadow on the plaster. */
+.letter-wall .wall-wire {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wall-wire path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wall-wire-shadow {
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 2.6;
+  transform: translateY(1.4px);
+}
+
+.wall-wire-line {
+  stroke: #4b5367;
+  stroke-width: 1.25;
+}
+
+.wall-plug rect {
+  fill: #2b303c;
+  stroke: #5b6378;
+  stroke-width: 0.8;
+}
+
+.wall-plug path {
+  stroke: #9aa2b4;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.letter-wall .wall-cell {
+  position: relative;
+  --lamp: 0;
+}
+
+/* Warm letters fade in and out softly; a running effect owns the light meanwhile. */
+.letter-wall .wall-cell:not([data-fx]) {
+  transition: --lamp 0.6s var(--ease-out);
+}
+
+/* Letters of the name being typed keep a faint glow. */
+.letter-wall .wall-cell.is-warm {
+  --lamp: 0.42;
+}
+
+.letter-wall .wall-cell .lamp {
+  --lamp-size: 11px;
+}
+
+.letter-wall .wall-cell[data-fx="flash-a"] {
+  animation: lamp-flash-a 1.15s cubic-bezier(0.3, 0.6, 0.4, 1);
+}
+
+.letter-wall .wall-cell[data-fx="flash-b"] {
+  animation: lamp-flash-b 1.15s cubic-bezier(0.3, 0.6, 0.4, 1);
+}
+
+.letter-wall .wall-cell[data-fx="flicker"] {
+  animation: lamp-flicker 0.9s;
+}
+
+.letter-wall .wall-cell[data-fx="glow"] {
+  animation: lamp-glow 3.4s ease-in-out;
+}
+
+/* Power on: no fill, so a bulb waiting for the current stays as it was. */
+.letter-wall .wall-cell[data-fx="chase"] {
+  animation: lamp-chase 0.55s cubic-bezier(0.3, 0.6, 0.4, 1) var(--d, 0ms);
+}
+
+/* Painted by hand on the plaster: each letter leans, sits and swells its own way, and its bulb
+   tints and lights it when it comes on. */
+.letter-wall .wall-letter {
+  position: relative;
+  font-weight: var(--paint-weight, 800);
+  transform: translateY(var(--lift, 0px)) rotate(var(--tilt, 0deg)) scale(var(--grow, 1));
+  color: rgba(236, 230, 221, calc(0.7 + 0.3 * var(--lamp)));
+  color: color-mix(in srgb, rgb(var(--bulb-rgb)) calc(min(var(--lamp), 1) * 34%), rgba(236, 230, 221, calc(0.7 + 0.3 * var(--lamp))));
+  text-shadow:
+    0 0 1px rgba(236, 230, 221, 0.3),
+    0 0 calc(12px * var(--lamp)) rgba(var(--bulb-rgb), calc(0.7 * var(--lamp)));
+}
+
+/* ---------- The string of collected clues (lights.js) ---------- */
+
+.light-string {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 36px;
+  margin: 10px -4px 0;
+}
+
+/* The wire sags across the width and fades at both ends; its stroke keeps its width. */
+.light-wire {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.light-wire path {
+  fill: none;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.light-wire-shadow {
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 3;
+}
+
+.light-wire-line {
+  stroke: #454d60;
+  stroke-width: 1.4;
+}
+
+/* Each bulb hangs from the wire where it passes (lights.js computes --x and --y). */
+.light-string .lamp {
+  --lamp-size: 12px;
+  position: absolute;
+  top: calc(var(--y) - 1px);
+  left: calc(var(--x) - var(--lamp-size) / 2);
+}
+
+.light-string .lamp.is-on {
+  --lamp: 1;
+}
+
+/* Now and then one of the lit bulbs blinks, as old strings do. */
+.light-string .lamp.is-on:nth-of-type(3n + 2) {
+  animation: lamp-falter 13s calc(5s + var(--n, 0) * 1.9s) infinite;
+}
+
+/* First visit: the lit bulbs power on one after another, with the tiles. */
+.light-string.is-entering .lamp.is-on {
+  animation: lamp-on 0.9s calc(280ms + var(--lit-n, 0) * 140ms) backwards;
+}
+
+.light-string.is-entering .lamp.is-on:nth-of-type(3n + 2) {
+  animation:
+    lamp-on 0.9s calc(280ms + var(--lit-n, 0) * 140ms) backwards,
+    lamp-falter 13s calc(5s + var(--n, 0) * 1.9s) infinite;
+}
+
+/* The clue just collected: its bulb flickers on last, with a surge. */
+.light-string .lamp.is-on.is-fresh {
+  animation: lamp-on-fresh 1.4s 420ms backwards;
+}
+
+.light-string.is-entering .lamp.is-on.is-fresh {
+  animation: lamp-on-fresh 1.4s calc(420ms + var(--lit-n, 0) * 140ms) backwards;
+}
+
+/* Desktop: the wire spans a wide column; bigger bulbs and a deeper sag keep it a string of lights,
+   not a row of specks (positions are percentages of the box, so they stay on the curve). */
+@media (min-width: 1024px) {
+  .light-string {
+    height: 48px;
+  }
+
+  .light-string .lamp {
+    --lamp-size: 17px;
+  }
+}
+
+/* ---------- Waiting: a short wire of bulbs, the current chasing along it (lights.js) ---------- */
+
+/* Same box as the old loader mark (42 x 14), so nothing around it moves. */
+.loader-string {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 42px;
+  height: 14px;
+  padding: 1px 4px 0;
+}
+
+.loader-string::before {
+  content: "";
+  position: absolute;
+  top: 1.5px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--ash-rgb), 0.5) 18%, rgba(var(--ash-rgb), 0.5) 82%, transparent);
+}
+
+.loader-string .lamp {
+  --lamp-size: 7px;
+  animation: lamp-run 1.28s calc(var(--k, 0) * 160ms) infinite backwards;
+}
+
+.loader-string .lamp:nth-child(4n + 1) {
+  --k: 0;
+}
+
+.loader-string .lamp:nth-child(4n + 2) {
+  --k: 1;
+  --bulb-rgb: var(--bulb-amber-rgb);
+}
+
+.loader-string .lamp:nth-child(4n + 3) {
+  --k: 2;
+  --bulb-rgb: var(--bulb-green-rgb);
+}
+
+.loader-string .lamp:nth-child(4n) {
+  --k: 3;
+  --bulb-rgb: var(--bulb-blue-rgb);
+}
+
+/* On the red submit button the bulbs are plain warm white; in a room they take its light. */
+.auth-submit .loader-string .lamp {
+  --bulb-rgb: var(--foam-rgb);
+}
+
+.auth-submit .loader-string::before {
+  background: linear-gradient(90deg, transparent, rgba(var(--foam-rgb), 0.45) 18%, rgba(var(--foam-rgb), 0.45) 82%, transparent);
+}
+
+body[data-theme] .loader-string .lamp {
+  --bulb-rgb: var(--light-rgb);
+}
+
+/* Each bulb lights once per beat (one flash in 1.28 s), the wave running left to right. */
+@keyframes lamp-run {
+  0% {
+    --lamp: 0.06;
+  }
+  8% {
+    --lamp: 1.15;
+    animation-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1);
+  }
+  42%,
+  100% {
+    --lamp: 0.06;
+  }
+}
+
+/* ---------- Saved: a lit amber bulb whose filament is the check (lights.js badge) ---------- */
+
+.check-lamp {
+  --lamp-size: 12px;
+  --bulb-rgb: var(--success-rgb);
+  --lamp: 1;
+  animation: lamp-on 0.9s backwards;
+}
+
+.check-filament {
+  position: absolute;
+  z-index: 1;
+  top: 34%;
+  left: 8%;
+  width: 84%;
+  height: 60%;
+  overflow: visible;
+}
+
+.check-filament path {
+  fill: none;
+  stroke: #5a2a00;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: badge-draw 0.45s var(--ease-out) 0.4s forwards;
+}
+
+/* ---------- A view crosses over: one VHS glitch (Sottosopra and the green sea) ---------- */
+
+/* 190 ms in four held frames: the picture rolls in torn and shifted, its colours split, then
+   locks. No forwards fill: once it ends the view carries no transform (fixed descendants and the
+   ombre lean stay untouched; ombre and tarot are left out anyway). */
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .view {
+  position: relative;
+  animation: vhs-in var(--glitch-duration) steps(1, end);
+}
+
+/* The tracking noise: a band of streaks riding the torn edge of each frame, gone when it locks. */
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .view::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: -16px;
+  right: -16px;
+  height: 12px;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(236, 230, 221, 0.55) 0 1px, transparent 1px 5px, rgba(236, 230, 221, 0.22) 5px 9px, transparent 9px 14px, rgba(236, 230, 221, 0.4) 14px 16px, transparent 16px 23px),
+    linear-gradient(transparent, rgba(var(--ash-rgb), 0.3) 35%, rgba(var(--ash-rgb), 0.42) 55%, transparent);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: vhs-band var(--glitch-duration) steps(1, end);
+}
+
+@keyframes vhs-band {
+  0% {
+    top: calc(36% - 12px);
+    opacity: 1;
+  }
+  22% {
+    top: calc(70% - 16px);
+    height: 16px;
+    opacity: 0.85;
+  }
+  46% {
+    top: calc(91% - 8px);
+    height: 7px;
+    opacity: 0.6;
+  }
+  72% {
+    opacity: 0;
+  }
+}
+
+/* The glitch is the entrance there: the frame's own fades would only blur it. */
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .view :is(.progress, .route-notice, .riddle-nav, .puzzle) {
+  animation: none;
+}
+
+@keyframes vhs-in {
+  0% {
+    opacity: 0.45;
+    transform: translate3d(-12px, 0, 0);
+    clip-path: inset(0 0 64% 0);
+    text-shadow:
+      5px 0 rgba(var(--bulb-red-rgb), 0.8),
+      -5px 0 rgba(var(--bulb-blue-rgb), 0.75);
+  }
+  22% {
+    opacity: 1;
+    transform: translate3d(9px, 0, 0) skewX(-5deg);
+    clip-path: inset(16% 0 30% 0);
+    text-shadow:
+      -4px 0 rgba(var(--bulb-red-rgb), 0.7),
+      4px 0 rgba(var(--bulb-blue-rgb), 0.7);
+  }
+  46% {
+    transform: translate3d(-4px, 0, 0);
+    clip-path: inset(0 0 9% 0);
+    text-shadow:
+      2px 0 rgba(var(--bulb-red-rgb), 0.55),
+      -2px 0 rgba(var(--bulb-blue-rgb), 0.55);
+  }
+  72% {
+    transform: translate3d(1.5px, 0, 0);
+    clip-path: inset(0);
+    text-shadow:
+      -1px 0 rgba(var(--bulb-red-rgb), 0.4),
+      1px 0 rgba(var(--bulb-blue-rgb), 0.4);
+  }
+  100% {
+    transform: none;
+    clip-path: none;
+    text-shadow: none;
+  }
+}
+
+/* The riddle's title catches its red glow after the glitch (one flash of the glow only). */
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .riddle-title {
+  animation: title-catch 0.9s steps(1, end) 0.22s backwards;
+}
+
+@keyframes title-catch {
+  0% {
+    text-shadow: 0 0 1px rgba(var(--sheen-rgb), 0.1);
+  }
+  22% {
+    text-shadow:
+      0 0 1px rgba(var(--sheen-rgb), 0.45),
+      0 0 30px rgba(var(--light-rgb), 0.55);
+  }
+  34% {
+    text-shadow: 0 0 1px rgba(var(--sheen-rgb), 0.12);
+  }
+  56% {
+    text-shadow:
+      0 0 1px rgba(var(--sheen-rgb), 0.5),
+      0 0 36px rgba(var(--light-rgb), 0.62);
+  }
+}
+
+/* ---------- Index: tiles flicker on in sequence (first visit only) ---------- */
+
+/* Each tile: on, a drop, on (one flash), 110 ms after the one above it. */
+.js .tile.ignite.lit {
+  animation: tile-on 0.6s steps(1, end) calc(var(--i, 0) * 110ms + 120ms) backwards;
+}
+
+@keyframes tile-on {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.7;
+  }
+  32% {
+    opacity: 0.14;
+  }
+  52% {
+    opacity: 1;
+  }
+}
+
+/* Its bulb warms a beat later, the filament catching. */
+.js .tile.ignite.lit.is-solved .tile-light {
+  animation: lamp-on 0.9s calc(var(--i, 0) * 110ms + 420ms) backwards;
+}
+
+/* The growth on a locked tile creeps in from the edge. */
+.js .tile.ignite.lit.is-locked::after {
+  animation: vines-creep 1.8s var(--ease-out) calc(var(--i, 0) * 110ms + 260ms) backwards;
+}
+
+@keyframes vines-creep {
+  from {
+    transform: translate3d(46px, 0, 0);
+    opacity: 0;
+  }
+}
+
+.tile-light {
+  transition:
+    --lamp 0.4s var(--ease-out),
+    opacity 90ms linear;
+}
+
+.tile.is-solved .tile-light {
+  --lamp: 1;
+}
+
+/* A sealed riddle (no clock to wait for) keeps an ember in its dark bulb: the light still to
+   come. One slow breath every --pulse-duration, far from any flash. */
+.tile.is-locked:not(:has(.tile-countdown)) .tile-light {
+  animation: lamp-ember var(--pulse-duration) ease-in-out infinite;
+}
+
+@keyframes lamp-ember {
+  50% {
+    --lamp: 0.2;
+  }
+}
+
+/* An open riddle's bulb stirs under the finger, as if it wanted to light. */
+.tile:not(.is-solved):not(.is-locked):hover .tile-light {
+  --lamp: 0.3;
+}
+
+/* ---------- The lights answer a save ---------- */
+
+/* Back on the index, the tile of the clue just collected glows in its own bulb's colour and its
+   bulb comes on with a surge. */
+.tile.saved {
+  animation: tile-answer 1.6s var(--ease-out);
+}
+
+.tile.saved .tile-light {
+  animation: lamp-on-fresh 1.3s 150ms backwards;
+}
+
+.js .tile.ignite.lit.saved {
+  animation:
+    tile-on 0.6s steps(1, end) calc(var(--i, 0) * 110ms + 120ms) backwards,
+    tile-answer 1.6s var(--ease-out) calc(var(--i, 0) * 110ms + 560ms);
+}
+
+.js .tile.ignite.lit.saved .tile-light {
+  animation: lamp-on-fresh 1.3s calc(var(--i, 0) * 110ms + 520ms) backwards;
+}
+
+@keyframes tile-answer {
+  0% {
+    border-color: rgba(var(--bulb-rgb), 0.95);
+    box-shadow:
+      0 0 0 1px rgba(var(--bulb-rgb), 0.5),
+      0 0 46px -4px rgba(var(--bulb-rgb), 0.62),
+      0 24px 48px -28px rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* On the riddle page: the panel's rim strikes bright, drops, strikes again (one flash) and
+   settles, its hairline surging, while a string of bulbs runs along its top (lights.js chase) and
+   the ash blooms around the button (upside.js). The rooms keep their own save. */
+.puzzle.saved,
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .view .puzzle.saved {
+  animation: panel-answer 1.5s var(--ease-out);
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .puzzle.saved::before {
+  animation: hairline-surge 1.5s var(--ease-out);
+}
+
+@keyframes panel-answer {
+  0% {
+    border-color: rgba(var(--light-rgb), 0.95);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 28px 60px -30px rgba(0, 0, 0, 0.95),
+      0 0 64px -6px rgba(var(--light-rgb), 0.7);
+    animation-timing-function: steps(1, end);
+  }
+  7% {
+    border-color: rgba(var(--light-rgb), 0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      0 28px 60px -30px rgba(0, 0, 0, 0.95),
+      0 0 60px -34px rgba(var(--wake-rgb), 0.55);
+    animation-timing-function: steps(1, end);
+  }
+  14% {
+    border-color: rgba(var(--light-rgb), 0.9);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 28px 60px -30px rgba(0, 0, 0, 0.95),
+      0 0 58px -8px rgba(var(--light-rgb), 0.62);
+    animation-timing-function: var(--ease-out);
+  }
+}
+
+@keyframes hairline-surge {
+  0% {
+    box-shadow: 0 0 14px 1px rgba(var(--light-rgb), 0.9);
+  }
+}
+
+/* The string of the chase: the panel's top edge is its wire. */
+.save-chase {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 22px;
+  right: 22px;
+  height: 16px;
+  pointer-events: none;
+  animation: chase-life 2.1s linear forwards;
+}
+
+.save-chase::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -10px;
+  right: -10px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.75) 10%, rgba(var(--light-rgb), 0.75) 90%, transparent);
+}
+
+/* One run left to right, then every bulb together, fading with the strip. */
+.save-chase .lamp {
+  --lamp-size: 8px;
+  position: absolute;
+  top: 0;
+  left: calc(var(--x) - var(--lamp-size) / 2);
+  animation:
+    lamp-chase 0.5s cubic-bezier(0.3, 0.6, 0.4, 1) calc(var(--n, 0) * 45ms + 60ms),
+    lamp-all 1.05s cubic-bezier(0.3, 0.6, 0.4, 1) 1s;
+}
+
+@keyframes chase-life {
+  0% {
+    opacity: 0;
+  }
+  4%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes lamp-all {
+  0% {
+    --lamp: 1.4;
+  }
+  30% {
+    --lamp: 1;
+  }
+  100% {
+    --lamp: 0;
+  }
+}
+
+/* ---------- Sealed: the stamp lands, the rift tears open behind it ---------- */
+
+/* The stamp comes down crooked from above and lands at its -4deg (style.css); lights.js blooms
+   the ash where it hits (on animationend of stamp-press). */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .countdown.is-sealed {
+  animation: stamp-press 0.46s cubic-bezier(0.55, 0, 0.75, 0.2) 0.32s backwards;
+}
+
+@keyframes stamp-press {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) rotate(-10deg) scale(1.6);
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(-3.4deg) scale(0.95);
+    animation-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1);
+  }
+  100% {
+    transform: rotate(-4deg) scale(1);
+  }
+}
+
+/* As it lands the crack opens wide and glows, then settles into its slow pulse. */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::before {
+  animation:
+    rift-open 0.95s var(--ease-out) 0.6s backwards,
+    rift-pulse var(--pulse-duration) ease-in-out 1.55s infinite;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::after {
+  animation:
+    rift-swell 1.3s var(--ease-out) 0.6s backwards,
+    rift-pulse var(--pulse-duration) ease-in-out 1.9s infinite;
+}
+
+@keyframes rift-open {
+  0% {
+    opacity: 0;
+    transform: scale(0.55, 0.12);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.02, 1.12);
+  }
+  100% {
+    opacity: 0.55;
+    transform: none;
+  }
+}
+
+@keyframes rift-swell {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+  }
+}
+
+/* The seal gives way while the player waits on the page (app.js adds .is-unsealing): the crack
+   tears open from its centre line into the shard, a seam of white-hot light runs along it and
+   fades, as lightning strikes and the ash bursts (upside.js). One opening, no flashing. The seam
+   sits on the stage, outside the clipped loader, so its glow is never cut square. */
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal.is-unsealing .reveal-loader {
+  animation: rift-tear 0.8s var(--ease-out) backwards;
+}
+
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal.is-unsealing:not(.is-revealed) {
+  position: relative;
+}
+
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal.is-unsealing:not(.is-revealed)::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(var(--sheen-rgb), 0.9) 22%, rgba(var(--foam-rgb), 1) 50%, rgba(var(--sheen-rgb), 0.9) 78%, transparent);
+  box-shadow:
+    0 0 10px 2px rgba(var(--light-rgb), 0.85),
+    0 0 34px 8px rgba(var(--wake-rgb), 0.5);
+  opacity: 0;
+  pointer-events: none;
+  animation: rift-seam 0.9s var(--ease-out);
+}
+
+@keyframes rift-tear {
+  0% {
+    clip-path: inset(47% 0 47% 0);
+  }
+  30% {
+    clip-path: inset(38% 0 38% 0);
+  }
+  100% {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes rift-seam {
+  0% {
+    opacity: 1;
+    transform: scaleX(0.35);
+  }
+  28% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.04) scaleY(2.4);
+  }
+}
+
+/* A timed riddle: the clock's figures warm up like the sign (one flash). */
+.js body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .countdown:not(.is-sealed) {
+  animation: digits-on 0.8s steps(1, end) 0.25s backwards;
+}
+
+@keyframes digits-on {
+  0% {
+    opacity: 0.12;
+  }
+  18% {
+    opacity: 1;
+  }
+  28% {
+    opacity: 0.3;
+  }
+  46% {
+    opacity: 1;
+  }
+}
+
+/* ---------- Old tape: the grain crawls (Sottosopra only) ---------- */
+
+/* Seven held positions a second, a repaint of one tiled bitmap each: cheap on a phone. */
+body:not([data-theme]) .ambience::before {
+  animation: grain-crawl 1.1s steps(1, end) infinite;
+}
+
+@keyframes grain-crawl {
+  0% {
+    background-position: 0 0;
+  }
+  14% {
+    background-position: -47px 31px;
+  }
+  28% {
+    background-position: 63px -18px;
+  }
+  42% {
+    background-position: -22px -71px;
+  }
+  57% {
+    background-position: 88px 54px;
+  }
+  71% {
+    background-position: -76px 12px;
+  }
+  85% {
+    background-position: 29px 83px;
+  }
+}
+
+/* ---------- Reduced motion: the lights hold still ---------- */
+
+/* style.css already ends every animation at once (final states shown). Here: the letters of the
+   name stay plainly lit, the loader's bulbs stay lit and only breathe (it must still read as
+   working), and nothing keeps a compositing hint it no longer needs. */
+@media (prefers-reduced-motion: reduce) {
+  .letter-wall .wall-cell.is-warm {
+    --lamp: 0.75;
+  }
+
+  .loader-string .lamp {
+    --lamp: 0.8;
+    animation: none !important;
+  }
+
+  .loader-string {
+    animation: loader-breathe 2.4s ease-in-out infinite !important;
+  }
+
+  .reveal.is-unsealing .reveal-loader,
+  .tile.is-locked .tile-light {
+    animation: none !important;
+  }
+
+  .reveal.is-unsealing::before {
+    display: none;
+  }
+
+  .js .title-neon .title-line,
+  .js body:not(.is-playing) .title-mirror {
+    will-change: auto;
+  }
+}
