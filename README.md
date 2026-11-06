@@ -188,6 +188,17 @@ L'enigma 5 funziona come l'enigma 3 (sigillato finché non spunti la sua casella
 3. Nell'editor Apps Script esegui di nuovo **`setupUnlocks`**: aggiunge la riga `p5` con la casella **non spuntata** (le righe esistenti e le loro spunte restano come sono).
 4. Fai push di `video/enigma-5.enc` e di `puzzles.json`. Quando vuoi aprire l'enigma, spunta la casella `unlocked` della riga `p5` nel foglio **`Unlocks`**.
 
+### Enigma finale (annunciato, ancora sigillato)
+
+L'enigma finale (`p6`) è già nell'elenco ma **non è pubblicato**: in [`puzzles.json`](puzzles.json) ha `"gate": "flag"` e `"sealed": true`, e nessun video. Con `"sealed": true` il sito lo mostra chiuso a tutti ("ancora sigillato") senza chiedere nulla al backend, che non lo conosce ancora; la sua pagina mostra il sigillo e ogni mezzo minuto (o con **Controlla ora**) rilegge solo `puzzles.json`.
+
+Il giorno dell'uscita:
+
+1. Cifra il video in `video/enigma-6.enc` e aggiungi la proprietà dello script `MEDIA_KEY_p6` (come per l'enigma 5).
+2. In `Code.gs` aggiungi `p6: { keyProperty: 'MEDIA_KEY_p6' }` a `FLAG_PUZZLES`, ripubblica come **nuova versione dello stesso deployment** e riesegui **`setupUnlocks`**: aggiunge la riga `p6` con la casella **non spuntata**.
+3. In `puzzles.json` togli `"sealed": true` e aggiungi `"video": "video/enigma-6.enc"` (più `theme` o `videoType` se servono), poi fai push. Chi è sulla pagina dell'enigma la vede ricaricarsi da sola: da qui l'enigma è sigillato dal foglio, come gli altri.
+4. Quando vuoi aprirlo, spunta la casella `unlocked` della riga `p6` nel foglio **`Unlocks`**.
+
 ### Pagina nascosta `/periodica/` (immagine cifrata)
 
 La pagina [`periodica/`](periodica/index.html) mostra un'immagine solo a chi ha fatto l'accesso al sito; non è collegata da nessuna parte e chiede ai motori di ricerca di non indicizzarla (`noindex`). Chi non ha una sessione vede un invito ad accedere dalla pagina principale.
