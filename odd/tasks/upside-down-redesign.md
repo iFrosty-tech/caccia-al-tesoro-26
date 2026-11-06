@@ -144,11 +144,80 @@ orchestrator commits them. Nobody touches files outside their row.
 - Themes p3/p4/p5 still look like their rooms; `periodica/` renders its notice.
 
 ## Tasks
-- [ ] T1 — Phase 1 parallel: atmosfera, identita, varco, componenti.
-- [ ] T2 — Phase 2: motion (lights wall, lights progress, loaders, entrance, route glitch, save).
-- [ ] T3 — Phase 3: critica (visual/UX) + accessibilita (a11y, perf, regressions) reviews.
-- [ ] T4 — Phase 4: rifinitura applies confirmed fixes; orchestrator final check, commits, push.
+- [x] T1 — Phase 1 parallel: atmosfera, identita, varco, componenti.
+- [x] T2 — Phase 2: motion (lights wall, lights progress, loaders, entrance, route glitch, save).
+- [x] T3 — Phase 3: critica (visual/UX) + accessibilita (a11y, perf, regressions) reviews.
+- [x] T4 — Phase 4: rifinitura applies confirmed fixes; orchestrator final check, commits, push.
 
 ## Progress / evidence
 - Branch `claude/zealous-cray-cxqtfa` from `main` at 799b272.
 - Baseline screenshots taken with the harness before any change (night-sea look).
+- T1 atmosfera: `upside.js` replaces `plankton.js` (deleted). Storm sky with red-lit cloud decks,
+  rare lightning (≤ 2 strikes per burst, bursts ≥ 1.5 s apart, no white flash), drifting fog
+  thinned over the column, vines growing from the edges (they read `--column`), three depths of
+  ash stirred by touch/cursor, `bloom()` shock ring + embers; calmer tinted air for green/tarot/
+  ombre; one still frame under reduced motion; `Plankton` alias and `plankton:bloom` kept.
+- T1 identita: red C9 string-bulb mark across favicon.svg/32/180/192/512 (maskable safe zone
+  checked), og-image.png (one-line neon title over its rippled reflection, 216 KB), manifest
+  colours `#06070d`; `periodica/` loads `upside.js`, joins the look via `tavola.css` (glass panel,
+  hanging bulb with falter/dark states via `:has()`, chasing loader bulbs); `tavola.js` untouched.
+- T1 varco: `crystal.js` is an obsidian shard with glowing fissures; progress is rift light
+  rising inside it, decrypt is a lub-dub heartbeat, finish cracks it open (950 ms, bloom at the
+  crack). API unchanged, colours from body tokens, reduced motion = still frames.
+- T1 componenti: `index.html` + `style.css` rebuilt: neon outlined title with mirrored "Tesoro"
+  under a horizon, letter-wall slot, dark glass panels with red hairline and mask vines, salmon
+  errors with icon, Special Elite labels, bulb component, overgrown locked tiles, red rubber stamp
+  over a pulsing crack for sealed riddles, desktop two-column login / index; rooms kept. app.js
+  untouched by componenti.
+- T2 motion: `lights.js` (letter wall answering the username only, festoon progress string,
+  bulb loaders, amber bulb badge, save chase), `motion.css` (one registered `--lamp` number per
+  bulb, neon warm-up, VHS view glitch, tiles flickering on, stamp slam + rift tear, grain crawl),
+  guarded visual hooks in app.js (`lights()`, `crossOver()`, `mountLetterWall()`). Flash counts
+  ≤ 3/s, password fields never light the wall (probe: ALL PASS), fallbacks tested with lights.js
+  missing or throwing. 70/70 harness shots clean.
+- T3 critica: verdict "clearly Il Sottosopra, not a recolour"; no P0/P1. P2: unsealing was a hard
+  cut, desktop gate undersized, short phones scrolled the sign away on load, login button pushed
+  low; P3 polish (when-line wrap, clock centring, vine over the wall, save-status font swap, small
+  bulbs on desktop, no hint on the last sealed tile, sea leftovers, OG square crop).
+- T3 accessibilita: no P0. Regressions, semantics, reduced motion, hidden tab, wall privacy and
+  photosensitivity clean (lightning peak 0.079 vs 0.1 threshold). P1: upside.js quality step stuck
+  at 1.25× on a 4×-throttled phone (27 fps). P2: transient page widening during the glitch/stamp,
+  red numerals on the canvas < 4.5:1, Fraunces 271 KB. P3: back link halo, seek track 1.6:1,
+  blank frame on quality step, forced-colors "al" hidden, Figtree in tavola.js, field focus ring.
+- T4 rifinitura (fixes applied, working tree only):
+  - upside.js: slow test `workAvg > 7 || (gapAvg > 24 && workAvg > 3)`, settles after 90 frames,
+    repaints right after a quality step (no blank frame). 4× throttled phone now reaches 1× (canvas
+    390×984); unthrottled phone (2.15 ms/frame, 16.8 ms) and desktop keep full quality.
+  - style.css: `main { overflow-x: clip }` under 700 px (per-frame probe: innerWidth stays
+    390/320 on #/, p1, p3, p6 and while navigating); `.riddle-position-current` / `.progress-found`
+    in `--neon-edge` with a dark halo, halo on position, count and back link (worst p05 now
+    6.5 / 7.6 / 7.6 / 5.9, was 3.2 / 1.75 / 3.7 / 4.3); seek track #5f6678→#454b5b; field focus
+    ring 2px at .55; save status stays typewriter in every state; login panel keeps only the
+    bottom-left vine; phone login: wall rows 2.625rem, letters 1.2rem, tighter gaps (submit bottom
+    830→791 px at 390×844, register 932→891); desktop gate: crack box 200 px tall (draws ~500 px
+    wide), stamp 3rem, card 56/52 px padding; when-line 40ch ≥ 560 px; long clock box 5.85em
+    (measured widest reading 5.82em); forced-colors sign readable; `--tex-rift` redrawn with
+    uneven, forking, tapering branches.
+  - motion.css: sealing gives way on screen → `.reveal.is-unsealing` tears the loader open from
+    the crack line (clip-path, 0.8 s) under a fading white-hot seam, with `Upside.flash` + bloom;
+    sealed tiles keep a slow ember in their bulb (5.2 s); desktop string: 48 px wire, 17 px bulbs;
+    all off under reduced motion.
+  - app.js (visual only): `focus({ preventScroll: true })` on arrival (375×553 no longer opens
+    345 px down); "8&nbsp;novembre" kept together in the when-line; `.is-unsealing` + guarded
+    flash/bloom in `loadVideo` when the seal was on screen; stale "sea" comment.
+  - index.html + periodica/index.html: Fraunces request pinned to `opsz 72`, italic pinned to
+    SOFT 100 / WONK 1: 271 KB → 110 KB (title, tiles, tarot italics compared at 2×).
+  - Skipped: `tavola.js` Figtree (not in rifinitura's files; falls back to system-ui harmlessly),
+    app.js watermark font (SVG image cannot load web fonts), OG square crop (needs regeneration;
+    1.91:1 preview is correct), loader copy "affiorando" (frozen functional copy, user's call),
+    `wake-gradient` id (decorative, unreferenced).
+- T4 orchestrator: `node --check` on every JS file OK; no `plankton.js` reference left; harness
+  `--final --widths 390,1280` → 28/28 shots with no console/page errors and 0 px overflow;
+  login, login-typing, index, p1-saved, p6 (sealed preview), p4 (tarot room), desktop login and
+  the new og-image inspected. `app.js` diff reviewed: visual hooks only (lights, lightning,
+  unsealing class, focus without scroll, non-breaking date space), no logic change.
+
+## Next step
+Real-phone check by the organizer (frame rate of the storm, letter wall while typing, the
+unsealing tear the first time a flag riddle opens). Open decision for the organizer: the loader
+copy "Il video sta affiorando…" still speaks of the old sea.
