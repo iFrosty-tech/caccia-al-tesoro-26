@@ -1441,6 +1441,13 @@
     return puzzle.gate === "flag";
   }
 
+  // "sealed": true on a flag riddle in puzzles.json: announced but not published yet (no media in
+  // the repo, unknown to the server). It stays sealed on every device without asking the server;
+  // its page only re-reads puzzles.json, and opens for real once the organizer removes the field.
+  function isAnnounced(puzzle) {
+    return isFlagGated(puzzle) && puzzle.sealed === true;
+  }
+
   // A flag riddle the server still keeps closed (as of the login, or the riddle page's last check).
   function isSealed(puzzle) {
     const id = String(puzzle.id);
@@ -1925,6 +1932,7 @@
 
     async function requestKey() {
       if (requesting) return;
+      if (isAnnounced(puzzle)) return checkPublished();
       requesting = true;
       setChecking(true);
       lastRequest = Date.now();
@@ -1962,6 +1970,35 @@
       const key = String(data.key || "");
       if (hasVideo(puzzle)) loadVideo(key);
       else openRiddle(key);
+    }
+
+    // An announced riddle has no key to ask for yet: look whether puzzles.json still keeps it
+    // sealed. Once published, the whole game reloads, so the index and this page see it open.
+    async function checkPublished() {
+      requesting = true;
+      setChecking(true);
+      lastRequest = Date.now();
+      let list = null;
+      try {
+        list = await fetchPuzzles();
+      } catch (_) {
+        // Offline or a server hiccup: the seal stays, the next look comes on its own.
+      } finally {
+        requesting = false;
+        if (alive()) setChecking(false);
+      }
+      if (!alive()) return;
+      const latest = list && list.find((p) => p && String(p.id) === id);
+      if (latest && !isAnnounced(latest)) {
+        showPuzzles(session);
+        return;
+      }
+      if (!list) {
+        showSeal(false);
+        say("Controllo non riuscito. La pagina riprova da sola.", true);
+        return;
+      }
+      showSeal(true);
     }
 
     function onKeyError(err) {
@@ -2297,10 +2334,12 @@
 
     game.answers = answers;
     game.puzzles = puzzles.filter((puzzle) => puzzle && puzzle.id != null);
-    // Flag riddles the server lists as closed (all of them, if it lists none: an older backend).
+    // Flag riddles the server lists as closed (all of them, if it lists none: an older backend),
+    // plus the announced ones, which the server does not know yet.
     game.puzzles.forEach((puzzle) => {
       const id = String(puzzle.id);
-      if (isFlagGated(puzzle) && (!locked || locked.indexOf(id) >= 0)) game.sealed[id] = true;
+      if (!isFlagGated(puzzle)) return;
+      if (isAnnounced(puzzle) || !locked || locked.indexOf(id) >= 0) game.sealed[id] = true;
     });
     renderRoute();
   }

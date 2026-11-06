@@ -38,5 +38,12 @@
     "video": "video/enigma-5.enc",
     "gate": "flag",
     "theme": "ombre"
+  },
+  {
+    "id": "p6",
+    "title": "Enigma finale",
+    "text": "La soluzione all'enigma finale è:",
+    "gate": "flag",
+    "sealed": true
   }
 ]
