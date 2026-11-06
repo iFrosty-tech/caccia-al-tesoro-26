@@ -165,14 +165,15 @@
     if (igniter) igniter.disconnect();
   }
 
-  // The sea blooms around an element (plankton.js skips it under reduced motion).
+  // The ash blooms around an element (upside.js skips it under reduced motion).
   function bloomAt(element) {
-    if (!window.Plankton) return;
+    const upside = window.Upside || window.Plankton;
+    if (!upside) return;
     const rect = element.getBoundingClientRect();
-    window.Plankton.bloom(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    upside.bloom(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
-  // A riddle page may bring its own palette ("theme" in puzzles.json); the sea takes it too.
+  // A riddle page may bring its own palette ("theme" in puzzles.json); the storm takes it too.
   const THEMES = ["green", "tarot", "ombre"];
 
   function applyTheme(name) {
@@ -182,12 +183,45 @@
     if (window.Plankton && window.Plankton.setTheme) window.Plankton.setTheme(theme);
   }
 
-  // Saved answer: the card flares and the sea blooms around the button.
+  // Saved answer: the panel flickers bright and settles, a string of bulbs runs along its top
+  // (lights.js) and the ash blooms around the button.
   function celebrate(card, button) {
     card.classList.remove("saved");
     void card.offsetWidth; // restart the flare animation
     card.classList.add("saved");
+    lights("chase", card);
     bloomAt(button);
+  }
+
+  // The string lights (lights.js) are decoration: when they are missing or fail, every caller
+  // falls back to its plain version and the flow goes on.
+  function lights(method, ...args) {
+    const api = window.Lights;
+    if (!api || typeof api[method] !== "function") return null;
+    try {
+      return api[method](...args);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Crossing over (logged in, or a seal giving way): lightning strikes (upside.js skips it under
+  // reduced motion and keeps strikes far enough apart). Never in the way of the flow itself.
+  function crossOver() {
+    const upside = window.Upside || window.Plankton;
+    try {
+      if (upside && typeof upside.flash === "function") upside.flash(0.85);
+    } catch (_) {
+      // Only the lightning is lost.
+    }
+  }
+
+  // The alphabet wall of the login panel answers the username as it is typed, never the
+  // passwords (lights.js only listens to the field it is given). It lives as long as the view.
+  function mountLetterWall() {
+    const slot = document.getElementById("letter-wall");
+    const wall = slot ? lights("wall", slot, { input: els.usernameInput, delay: 1000 }) : null;
+    if (wall) onLeave(wall.destroy);
   }
 
   // ---------- Riddle media: audio and video players ----------
@@ -297,6 +331,9 @@
   }
 
   function wakeLoader(text) {
+    // The Sottosopra's loader: bulbs chasing along a short wire (lights.js); this one otherwise.
+    const bulbs = lights("loader", text);
+    if (bulbs) return bulbs;
     const loader = document.createElement("span");
     loader.className = "loader";
     const svg = document.createElementNS(SVG_NS, "svg");
@@ -319,8 +356,11 @@
     return loader;
   }
 
-  // Saved: a small ring of light with a check drawing itself inside.
+  // Saved: a lit amber bulb whose filament is the check (lights.js); in the tarot and ombre rooms,
+  // a small ring of light with a check drawing itself inside.
   function checkBadge() {
+    const bulb = lights("badge");
+    if (bulb) return bulb;
     const svg = document.createElementNS(SVG_NS, "svg");
     svg.setAttribute("class", "check-badge");
     svg.setAttribute("viewBox", "0 0 20 20");
@@ -1459,7 +1499,10 @@
     const date = new Date(time);
     const hour = date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
     if (new Date(serverNow()).toDateString() === date.toDateString()) return "Si svela alle " + hour;
-    const day = date.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+    // The day number and its month stay on one line ("8 novembre").
+    const day = date
+      .toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })
+      .replace(/(\d+) /, "$1\u00a0");
     return "Si svela " + day + " alle " + hour;
   }
 
@@ -1945,6 +1988,10 @@
 
     async function loadVideo(keyBase64) {
       clearTimeout(timer);
+      // The seal was on screen when the signal came: the crack tears open into the loader, with
+      // lightning and a burst of ash (visual only; a retry or a direct load opens plainly).
+      const unsealing = flag && !lock.hidden;
+      stage.classList.toggle("is-unsealing", unsealing);
       lock.hidden = true;
       showProblem("", null);
       if (!canDecrypt()) {
@@ -1952,6 +1999,10 @@
         return;
       }
       loader.hidden = false;
+      if (unsealing) {
+        crossOver();
+        bloomAt(loader);
+      }
       loaderTitle.textContent = "Il video sta affiorando…";
       meter.setPhase("download");
       showProgress(0, 0);
@@ -2190,11 +2241,13 @@
     forgetIgnites();
     els.puzzlesView.replaceChildren();
     els.registerSection.hidden = false;
+    mountLetterWall();
     setPageTitle("");
     // A device that has never played opens on "Registrati", afterwards on "Accedi".
     setAuthMode(hasPlayedHere() ? "login" : "register");
     if (els.passwordToggle.getAttribute("aria-pressed") === "true") togglePasswordVisibility();
-    els.usernameInput.focus();
+    // No scroll on arrival: on a short phone the jump would hide the neon sign and the wall.
+    els.usernameInput.focus({ preventScroll: true });
   }
 
   async function showPuzzles(session) {
@@ -2284,16 +2337,22 @@
     shown.append(found, " / " + puzzles.length);
     count.append(visuallyHidden(solved + " su " + puzzles.length), shown);
 
-    // One segment per riddle, in order: the collected ones glow.
-    const line = document.createElement("div");
-    line.className = "progress-line";
-    line.setAttribute("aria-hidden", "true");
-    puzzles.forEach((puzzle) => {
-      const segment = document.createElement("span");
-      if (savedAnswer(puzzle.id) !== "") segment.className = "is-lit";
-      if (String(puzzle.id) === game.freshId) segment.classList.add("is-fresh");
-      line.append(segment);
-    });
+    // One bulb per riddle, in order on a wire: the collected ones lit, the one just collected
+    // flickering on; on the first visit they power on with the tiles.
+    const collected = puzzles.map((puzzle) => savedAnswer(puzzle.id) !== "");
+    const freshIndex = puzzles.findIndex((puzzle) => String(puzzle.id) === game.freshId);
+    let line = lights("string", puzzles.length, collected, { fresh: freshIndex, entrance: !game.rendered });
+    if (!line) {
+      line = document.createElement("div");
+      line.className = "progress-line";
+      line.setAttribute("aria-hidden", "true");
+      puzzles.forEach((puzzle, index) => {
+        const segment = document.createElement("span");
+        if (collected[index]) segment.className = "is-lit";
+        if (index === freshIndex) segment.classList.add("is-fresh");
+        line.append(segment);
+      });
+    }
 
     progress.append(heading, count, line);
 
@@ -2698,6 +2757,7 @@
       els.usernameInput.value = "";
       els.passwordInput.value = "";
       els.confirmInput.value = "";
+      crossOver();
       showPuzzles(session);
     } catch (err) {
       els.registerError.textContent = err.message;

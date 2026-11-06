@@ -1,46 +1,95 @@
-/* Night sea world: abyss ground, living plankton light, thin luminous type. */
+/* Il Sottosopra: the hunt seen from the other side. A cold void full of ash (upside.js) and only
+   fragile artificial light: string bulbs, a red rift glow, red neon. This file holds the whole
+   UI system and every static end state; motion.css (loaded after) adds the choreography on the
+   hooks named in the comments ("motion hook"). */
 
 :root {
-  --abyss: #03060b;
-  --deep: #0a1422;
-  --ghost: #1a2b3f;
-  --panel: rgba(10, 20, 34, 0.62);
-  --panel-edge: rgba(102, 246, 255, 0.14);
-  --field: rgba(3, 6, 11, 0.6);
-  --field-edge: #536a7f; /* 3.4:1 against the panel: a field reads as a field */
-  --wake: #0b6ae0;
-  --wake-bright: #1e8bff;
-  --light: #66f6ff;
-  --light-soft: rgba(102, 246, 255, 0.35);
-  /* Channels of the accent lights, for glows at any opacity: rgba(var(--light-rgb), 0.5). */
-  --light-rgb: 102, 246, 255;
-  --wake-rgb: 30, 139, 255;
-  --wake-deep-rgb: 11, 106, 224;
-  --deep-rgb: 11, 60, 120;
-  --sheen-rgb: 190, 252, 255;
-  --foam-rgb: 233, 254, 255;
-  --foam: #e9feff; /* near-white light: icons, checks, the loader on a lit button */
-  --light-text: #bdf8ff; /* lit text: saved answers, hint text */
-  --text: #e6f4ff;
-  --muted: #8fb2cc;
-  --placeholder: #7d9bb3;
-  --error: #ff8f86;
-  --radius: 18px;
-  --radius-control: 12px;
+  /* Ground and glass. --abyss stays a 6-digit hex: crystal.js parses it. */
+  --abyss: #06070d;
+  --deep: #0e1220;
+  --ghost: #232a3d;
+  --panel: rgba(12, 15, 26, 0.74);
+  --panel-edge: rgba(255, 59, 48, 0.2); /* the red hairline of every panel */
+  --field: rgba(5, 6, 12, 0.72);
+  --field-edge: #646c7e; /* 3.7:1 against the panel: a field reads as a field */
+  /* Rift red: the primary action (white text 7.9:1 on --wake) and the glow of focus and marks
+     (--light, 5.8:1 on the panel). */
+  --wake: #a3121a;
+  --wake-bright: #e3262e;
+  --light: #ff4a3d;
+  --light-soft: rgba(255, 74, 61, 0.35);
+  /* Channels of the lights, for glows at any opacity: rgba(var(--light-rgb), 0.5). */
+  --light-rgb: 255, 74, 61;
+  --wake-rgb: 227, 38, 46;
+  --wake-deep-rgb: 163, 18, 26;
+  --deep-rgb: 92, 14, 24; /* the storm's red underbelly */
+  --sheen-rgb: 255, 196, 184;
+  --foam-rgb: 255, 241, 234;
+  --foam: #fff1ea; /* near-white light: icons, checks, the loader on a lit button */
+  --light-text: #ffd7a8; /* lamp-lit paper: saved answers, subtitles (14:1) */
+  --text: #ece6dd; /* warm paper white, 15.6:1 on the panel */
+  --muted: #a7adbb; /* 8.6:1 */
+  --placeholder: #7d8394; /* 5.1:1 on a field */
+  --error: #ffb4a4; /* salmon, never the rift red; always paired with the alert icon */
+  --success: #ffc35c; /* a warm lit bulb */
+  --success-rgb: 255, 195, 92;
+  /* The red neon of the title: the tube's edge and its hottest core. */
+  --neon-edge: #ff9488;
+  --neon-core: #ffe3dc;
+  /* String-light bulbs: only for lights, never for text. */
+  --bulb-red: #ff3b30;
+  --bulb-amber: #ffb627;
+  --bulb-green: #39d98a;
+  --bulb-blue: #3d8bff;
+  --bulb-pink: #ff5fa2;
+  --bulb-red-rgb: 255, 59, 48;
+  --bulb-amber-rgb: 255, 182, 39;
+  --bulb-green-rgb: 57, 217, 138;
+  --bulb-blue-rgb: 61, 139, 255;
+  --bulb-pink-rgb: 255, 95, 162;
+  --storm: #3a4a63; /* lightning-lit cloud */
+  --ash-rgb: 184, 196, 214;
+  --radius: 14px;
+  --radius-control: 10px;
+  --column: 640px; /* the reading column; the compact header lines up with it */
+  /* Motion language (motion.css): flicker reveals, the rift's pulse, one VHS glitch per view. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --display: "Josefin Sans", "Futura", "Century Gothic", sans-serif;
-  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --flicker-steps: steps(1, end);
+  --flicker-duration: 760ms;
+  --pulse-duration: 5.2s;
+  --glitch-duration: 190ms;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --type: "Special Elite", "Courier New", ui-monospace, monospace; /* typed accents only */
+  /* Drawn once, reused: organic growth and cracks are masks, so they take each room's colour. */
+  --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .72 0 0 0 0 .77 0 0 0 0 .84 1.3 0 0 0 -.56'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --tex-vines: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath stroke-width='2.2' d='M160 5C142 9 130 3 116 11S94 29 78 27 56 37 44 35'/%3E%3Cpath stroke-width='1.5' d='M116 11C111 25 117 35 109 47S111 65 103 77'/%3E%3Cpath stroke-width='1' d='M94 25C88 37 74 39 67 51M109 47C99 49 93 57 85 57M103 77C97 83 98 92 91 97'/%3E%3Cpath stroke-width='2' d='M155 0C151 22 157 40 147 58S151 90 139 108 141 130 133 146'/%3E%3Cpath stroke-width='1' d='M147 58C135 62 129 74 119 76M142 100C151 108 153 118 159 122M137 124C127 128 124 138 116 140'/%3E%3Cg stroke='none' fill='%23000'%3E%3Ccircle cx='44' cy='35' r='1.7'/%3E%3Ccircle cx='67' cy='51' r='1.3'/%3E%3Ccircle cx='133' cy='146' r='1.5'/%3E%3Ccircle cx='91' cy='97' r='1.2'/%3E%3Ccircle cx='116' cy='140' r='1.1'/%3E%3C/g%3E%3C/svg%3E");
+  --tex-vines-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cg transform='rotate(180 80 80)'%3E%3Cpath stroke-width='2.2' d='M160 5C142 9 130 3 116 11S94 29 78 27 56 37 44 35'/%3E%3Cpath stroke-width='1.5' d='M116 11C111 25 117 35 109 47S111 65 103 77'/%3E%3Cpath stroke-width='1' d='M94 25C88 37 74 39 67 51M109 47C99 49 93 57 85 57'/%3E%3Cpath stroke-width='2' d='M155 0C151 22 157 40 147 58S151 90 139 108'/%3E%3Cpath stroke-width='1' d='M147 58C135 62 129 74 119 76'/%3E%3Cg stroke='none' fill='%23000'%3E%3Ccircle cx='44' cy='35' r='1.7'/%3E%3Ccircle cx='67' cy='51' r='1.3'/%3E%3Ccircle cx='139' cy='108' r='1.4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --tex-tangle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 100' fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath stroke-width='2.4' d='M222 30C200 34 190 22 172 30S146 52 126 46 100 54 86 50'/%3E%3Cpath stroke-width='1.5' d='M172 30C168 16 176 8 170 -2M146 46C142 60 150 70 144 82'/%3E%3Cpath stroke-width='2' d='M222 74C204 70 196 84 180 80S156 90 140 102'/%3E%3Cpath stroke-width='1.3' d='M222 52C210 56 206 64 194 62S178 58 168 64'/%3E%3Cpath stroke-width='1' d='M196 78C192 90 198 96 194 104M126 46C118 36 108 38 100 30M86 50C78 54 72 50 64 56M168 64C160 70 152 66 146 72'/%3E%3Cg stroke='none' fill='%23000'%3E%3Ccircle cx='86' cy='50' r='1.6'/%3E%3Ccircle cx='64' cy='56' r='1.2'/%3E%3Ccircle cx='100' cy='30' r='1.2'/%3E%3Ccircle cx='144' cy='82' r='1.3'/%3E%3Ccircle cx='146' cy='72' r='1'/%3E%3C/g%3E%3C/svg%3E");
+  --tex-rift: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round'%3E%3Cdefs%3E%3Cfilter id='b' x='-10%25' y='-30%25' width='120%25' height='160%25'%3E%3CfeGaussianBlur stdDeviation='3.2'/%3E%3C/filter%3E%3Cg id='r'%3E%3Cpath fill='%23000' stroke='none' d='M6 80 24 78.5 41 79 58 76.5 77 78 96 74.5 113 76 131 72.5 152 74 170 71 186 73.5 203 70.5 219 72 236 71.5 251 74 270 72 289 75.5 305 74 322 77 341 76 360 78.5 377 78 394 80 375 81.5 357 81 338 83.5 318 83 300 85.5 284 84.5 266 87 249 86 231 88.5 214 87 197 89 181 86.5 163 88 147 85 129 86.5 110 83.5 92 84.5 73 82 55 82.5 37 81 20 81.5Z'/%3E%3Cpath stroke-width='2.2' d='M58 76.5 50 67M131 72.5 125 59M186 73.5 191 65M219 72 228 57M305 74 314 64M360 78.5 369 71M37 81 29 88M92 84.5 85 96M163 88 169 101M197 89 192 104M266 87 274 97M318 83 325 95'/%3E%3Cpath stroke-width='1.4' d='M50 67 53 57 43 47M125 59 131 47 123 32M228 57 224 45 235 33M314 64 327 59 332 48M85 96 89 108 80 121M192 104 198 118 191 133M325 95 320 105 329 117'/%3E%3Cpath stroke-width='.85' d='M43 47 38 39M53 57 62 52M123 32 127 20M131 47 143 41 148 33M125 59 114 55M191 65 189 58M235 33 233 24M228 57 241 53 249 46M332 48 341 42M314 64 311 53M369 71 381 69M29 88 24 97M80 121 83 131M89 108 100 114M169 101 165 111M191 133 196 145M198 118 210 124 214 134M192 104 181 108M274 97 272 106M329 117 327 127M325 95 337 99'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23r' filter='url(%23b)' opacity='.55'/%3E%3Cuse href='%23r' filter='url(%23b)' opacity='.25'/%3E%3Cuse href='%23r'/%3E%3C/svg%3E");
+  --tex-wear: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 0 0 0 6.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+  --icon-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8.2' fill='none' stroke='%23000' stroke-width='1.6'/%3E%3Cpath d='M10 5.4v5.8' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.4' r='1.2'/%3E%3C/svg%3E");
   color-scheme: dark;
   accent-color: var(--light);
   scrollbar-color: var(--ghost) transparent;
 }
 
-/* Green sea: a riddle page with "theme": "green" in puzzles.json (set on body by app.js).
-   Same abyss, the plankton glows green; the wake stays dark enough for white text (5:1). */
+/* ---------- Theme rooms: tokens ---------- */
+
+/* Green sea: a riddle page with "theme": "green" in puzzles.json (set on body by app.js). The same
+   other side drowned in green water: cool sea-white text, green light, a wake still dark enough
+   for white text (5:1). The vines and the rift turn into glowing weed (they are masks). */
 body[data-theme="green"] {
+  --abyss: #040a09;
+  --deep: #0a1a16;
+  --ghost: #1b3a31;
+  --panel: rgba(8, 20, 17, 0.74);
+  --panel-edge: rgba(109, 255, 180, 0.18);
+  --field: rgba(3, 8, 7, 0.72);
+  --field-edge: #5a7a6e;
   --light: #6dffb4;
   --light-soft: rgba(109, 255, 180, 0.35);
-  --panel-edge: rgba(109, 255, 180, 0.14);
   --wake: #08804a;
   --wake-bright: #18c46e;
   --light-rgb: 109, 255, 180;
@@ -51,13 +100,20 @@ body[data-theme="green"] {
   --foam-rgb: 236, 255, 245;
   --foam: #ecfff5;
   --light-text: #c2ffdc;
+  --text: #e3f4ec;
+  --muted: #9fbcb0;
+  --placeholder: #78968a;
+  --success: #6dffb4;
+  --success-rgb: 109, 255, 180;
+  --neon-edge: #9dffcf;
+  --neon-core: #e4fff1;
   accent-color: var(--light);
 }
 
-/* Tarot salon: the riddle-4 page ("theme": "tarot"), after its video "Il mazzo". The night sea
+/* Tarot salon: the riddle-4 page ("theme": "tarot"), after its video "Il mazzo". The other side
    turns into a dark aubergine room under one warm lamp: gold line work, wine-red card backs,
-   cream text. Contrast on the card face: text 15.8:1, muted 9:1, placeholder 6.9:1, field edge
-   4:1, focus gold 12:1; cream on the wine button 8:1. */
+   cream text, classical serif capitals. Contrast on the card face: text 15.8:1, muted 9:1,
+   placeholder 6.9:1, field edge 4:1, focus gold 12:1; cream on the wine button 8:1. */
 body[data-theme="tarot"] {
   --abyss: #0c060a;
   --deep: #1c0b15;
@@ -82,6 +138,12 @@ body[data-theme="tarot"] {
   --muted: #c9a99b;
   --placeholder: #b59484;
   --error: #ff9a8a;
+  --success: #efc678;
+  --success-rgb: 239, 198, 120;
+  --neon-edge: #f5d49a;
+  --neon-core: #fff4e2;
+  /* The salon reads its labels from the deck's serif, not from a typewriter. */
+  --type: var(--display);
   /* Gold line art of the deck, drawn once and reused (no external assets). */
   --tarot-gold: #e9c27a;
   --tarot-emblem: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='%23e9c27a' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='60' cy='60' r='33'/%3E%3Ccircle cx='60' cy='60' r='37' stroke-opacity='.45'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(45 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(90 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(135 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(180 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(225 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(270 60 60)'/%3E%3Cpath d='M60 58C55 49 55 38 60 29C65 38 65 49 60 58Z' transform='rotate(315 60 60)'/%3E%3Ccircle cx='60' cy='60' r='3' fill='%23e9c27a'/%3E%3Cpath d='M60 3V20M60 100V117M8 60H20M100 60H112' stroke-opacity='.7'/%3E%3Cpath d='M60 6l2.6 3.2L60 12.4l-2.6-3.2zM60 107.6l2.6 3.2L60 114l-2.6-3.2z' fill='%23e9c27a' stroke='none'/%3E%3C/svg%3E");
@@ -129,6 +191,10 @@ body[data-theme="ombre"] {
   --muted: #cdb393;
   --placeholder: #a98f72;
   --error: #ff9a8a;
+  --success: #f0a640;
+  --success-rgb: 240, 166, 64;
+  --neon-edge: #f7c27a;
+  --neon-core: #ffecc8;
   /* The theatre's own colours: the paper, its ink, the lamp's ember and amber. */
   --ombre-paper: #d6a86f;
   --ombre-paper-light: #e6c08a;
@@ -149,6 +215,8 @@ body[data-theme="ombre"] {
     radial-gradient(120% 70% at 50% 110%, rgba(var(--deep-rgb), 0.5), transparent 70%);
 }
 
+/* ---------- Base ---------- */
+
 * {
   box-sizing: border-box;
 }
@@ -166,17 +234,20 @@ body {
   flex-direction: column;
   color: var(--text);
   font: 400 1rem/1.6 var(--body);
+  /* Special Elite has one weight: never let the browser fake a bold one. */
+  font-synthesis: none;
   background-color: var(--abyss);
-  /* Depth beneath the plankton: deeper water rising from below. */
+  /* Under the ash canvas (and in its place if it never starts): the storm's red glow overhead,
+     a cold lightning-lit cloud low on one side. */
   background-image:
-    radial-gradient(120% 60% at 50% 115%, rgba(var(--deep-rgb), 0.42), transparent 70%),
-    radial-gradient(80% 40% at 15% -10%, rgba(26, 43, 63, 0.55), transparent 70%);
+    radial-gradient(140% 55% at 50% -14%, rgba(var(--deep-rgb), 0.6), transparent 70%),
+    radial-gradient(90% 45% at 88% 112%, rgba(58, 74, 99, 0.3), transparent 70%);
   background-attachment: fixed;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: rgba(var(--light-rgb), 0.28);
+  background: rgba(var(--light-rgb), 0.34);
   color: #ffffff;
 }
 
@@ -189,6 +260,14 @@ body {
   border-radius: 8px;
 }
 
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--light-rgb), 0.45);
+}
+
+[hidden] {
+  display: none !important;
+}
+
 .sea {
   position: fixed;
   inset: 0 auto auto 0;
@@ -196,16 +275,38 @@ body {
   pointer-events: none;
 }
 
-[hidden] {
-  display: none !important;
+/* Film grain, scanlines and a vignette between the ash and the page. Under the content (panels
+   blur it away), never on body::before/::after (the rooms use those). Static; motion.css may
+   step the grain's position. */
+.ambience {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px),
+    radial-gradient(135% 100% at 50% 42%, transparent 52%, rgba(2, 2, 6, 0.72) 100%);
 }
 
-/* ---------- Header: hero on login, compact while playing ---------- */
+.ambience::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--tex-grain) 0 0 / 180px 180px repeat;
+  opacity: 0.22;
+}
+
+/* The rooms are lit sets, not old tape: grain and vignette stay, scanlines go. */
+body[data-theme] .ambience {
+  background: radial-gradient(135% 100% at 50% 42%, transparent 52%, rgba(2, 2, 6, 0.6) 100%);
+}
+
+/* ---------- Header: the neon sign on login, one quiet line while playing ---------- */
 
 .site-header,
 main {
   width: 100%;
-  max-width: 640px;
+  max-width: var(--column);
   margin: 0 auto;
   padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
 }
@@ -215,24 +316,32 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-top: max(40px, env(safe-area-inset-top));
-  padding-bottom: 24px;
+  padding-top: max(36px, env(safe-area-inset-top));
+  padding-bottom: 22px;
 }
 
+/* "Caccia / al / Tesoro" as a stacked shop sign in heavy soft Fraunces: outlined red tubes, a
+   small hot script "al". Its upside-down reflection (.title-mirror) hangs under the horizon
+   line (.title::after). Motion hooks: .title-neon .title-line (--i: 0..2) flicker in;
+   .title-mirror wavers. */
 .title {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  margin: 0;
+  /* Room for the visible part of the reflection. */
+  margin: 0 0 0.66em;
   font-family: var(--display);
-  font-weight: 200;
-  font-size: clamp(3.6rem, 19vw, 6rem);
-  line-height: 0.95;
+  font-size: clamp(3.3rem, 17.5vw, 5.75rem);
+  font-weight: 900;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  line-height: 0.88;
   letter-spacing: -0.01em;
   color: var(--text);
-  text-shadow:
-    0 0 1px rgba(230, 244, 255, 0.9),
-    0 0 22px rgba(var(--light-rgb), 0.38);
+}
+
+.title-neon,
+.title-mirror {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .title-line {
@@ -240,43 +349,84 @@ main {
 }
 
 .title-al {
-  margin: 0.05em 0 0.02em 1.6em;
-  font-size: 0.5em;
+  margin: 0.03em 0 0.05em 2.5em;
+  font-size: 0.46em;
   font-style: italic;
-  color: var(--light);
-  text-shadow: 0 0 18px rgba(var(--light-rgb), 0.6);
+  font-weight: 600;
+  line-height: 1;
 }
 
-.wake {
-  display: block;
-  width: min(100%, 22rem);
-  height: auto;
-  margin-top: 0.1em;
-  overflow: visible;
+/* The glow follows the tubes (a drop-shadow of the stroke, not a blur of the whole letter). */
+.title-neon {
+  filter:
+    drop-shadow(0 0 1.5px rgba(var(--light-rgb), 0.95))
+    drop-shadow(0 0 7px rgba(var(--wake-rgb), 0.8))
+    drop-shadow(0 0 24px rgba(var(--wake-rgb), 0.45));
 }
 
-.wake-path {
-  fill: none;
-  stroke: url(#wake-gradient);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 4px rgba(var(--light-rgb), 0.7));
+.title-neon .title-line,
+.title-mirror .title-line {
+  color: rgba(var(--light-rgb), 0.1);
+  -webkit-text-stroke: 0.022em var(--neon-edge);
 }
 
-.wake-head {
-  fill: var(--foam);
-  filter: drop-shadow(0 0 6px var(--light));
+.title-neon .title-al,
+.title-mirror .title-al {
+  color: var(--neon-core);
+  -webkit-text-stroke: 0;
+}
+
+/* Without text-stroke the tubes would vanish: fill them instead. */
+@supports not (-webkit-text-stroke: 1px black) {
+  .title-neon .title-line,
+  .title-mirror .title-line {
+    color: var(--neon-edge);
+  }
+}
+
+/* The same sign upside down, folded on its last baseline and squashed like a reflection on wet
+   ground; only its nearest line shows before it fades into the dark. */
+.title-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 50% 100%;
+  transform: scaleY(-0.74);
+  opacity: 0.5;
+  filter: blur(0.7px) drop-shadow(0 0 10px rgba(var(--wake-rgb), 0.55));
+  -webkit-mask-image: linear-gradient(to top, #000 4%, rgba(0, 0, 0, 0.5) 26%, transparent 52%);
+  mask-image: linear-gradient(to top, #000 4%, rgba(0, 0, 0, 0.5) 26%, transparent 52%);
+  pointer-events: none;
+}
+
+/* Only the nearest word is reflected: the farther lines would surface as stray marks. */
+.title-mirror .title-caccia,
+.title-mirror .title-al {
+  visibility: hidden;
+}
+
+/* The horizon between the two worlds: a thin line of rift light the sign stands on. */
+.title::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: -16px;
+  right: -16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.5) 18%, rgba(var(--light-rgb), 0.38) 62%, transparent);
+  box-shadow: 0 0 10px rgba(var(--light-rgb), 0.35);
+  pointer-events: none;
 }
 
 .user-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
-  padding: 4px 4px 4px 14px;
+  padding: 3px 3px 3px 14px;
   border: 1px solid var(--panel-edge);
   border-radius: 999px;
-  background: var(--panel);
+  background: rgba(10, 12, 21, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   font-size: 0.9rem;
@@ -296,7 +446,7 @@ main {
   white-space: nowrap;
 }
 
-/* Playing: the title condenses into one quiet line at the top. */
+/* Playing: the sign shrinks to one lit line at the top, over a veil of the void. */
 .is-playing .site-header {
   flex: none;
   position: sticky;
@@ -307,18 +457,50 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: max(12px, env(safe-area-inset-top));
+  padding-top: max(10px, env(safe-area-inset-top));
   padding-bottom: 12px;
   /* Full-width veil (no seam at the column edge on wide screens), content kept in the column. */
   max-width: none;
   padding-inline:
-    max(16px, env(safe-area-inset-left), calc((100% - 608px) / 2))
-    max(16px, env(safe-area-inset-right), calc((100% - 608px) / 2));
-  background: linear-gradient(var(--abyss) 40%, rgba(3, 6, 11, 0));
+    max(16px, env(safe-area-inset-left), calc((100% - var(--column)) / 2 + 16px))
+    max(16px, env(safe-area-inset-right), calc((100% - var(--column)) / 2 + 16px));
+  background: linear-gradient(var(--abyss) 45%, rgba(6, 7, 13, 0));
 }
 
 .is-playing .title {
   flex-shrink: 0;
+  margin: 0;
+  font-size: clamp(1.1rem, 5.2vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* Small, the tubes would be too thin to read: the line is lit solid instead. */
+.is-playing .title-neon {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.26em;
+  filter:
+    drop-shadow(0 0 1px rgba(var(--light-rgb), 0.9))
+    drop-shadow(0 0 8px rgba(var(--wake-rgb), 0.6));
+}
+
+.is-playing .title-neon .title-line {
+  color: var(--neon-core);
+  -webkit-text-stroke: 0;
+}
+
+.is-playing .title-neon .title-al {
+  margin: 0;
+  font-size: 0.82em;
+  color: var(--neon-edge);
+}
+
+.is-playing .title-mirror,
+.is-playing .title::after {
+  display: none;
 }
 
 .is-playing .user-bar {
@@ -331,31 +513,26 @@ main {
   .user-hello {
     display: none;
   }
+
+  .is-playing .site-header {
+    gap: 8px;
+  }
 }
 
-.is-playing .title {
-  flex-direction: row;
-  gap: 0.28em;
-  font-size: clamp(1.05rem, 5vw, 1.5rem);
-  white-space: nowrap;
-  font-weight: 300;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
-}
-
-.is-playing .title-al {
-  margin: 0;
-  font-size: 1em;
-}
-
-.is-playing .wake {
-  display: none;
-}
-
-/* ---------- Main ---------- */
+/* ---------- Main and panels ---------- */
 
 main {
-  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+}
+
+/* Phones: main spans the screen, so its edge is the screen's. The view glitch (skewed frames,
+   the tracking band) and the stamp's landing reach past it for a moment; clip them there so the
+   page never widens. `clip` makes no scroll container: the sticky header and the ombre lean are
+   unaffected. */
+@media (max-width: 699px) {
+  main {
+    overflow-x: clip;
+  }
 }
 
 .is-playing main {
@@ -365,10 +542,11 @@ main {
 h2 {
   margin: 0 0 6px;
   font-family: var(--display);
-  font-weight: 300;
-  font-size: 1.6rem;
-  line-height: 1.2;
-  letter-spacing: 0;
+  font-weight: 650;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
   text-wrap: balance;
 }
 
@@ -380,18 +558,24 @@ p {
   color: var(--muted);
 }
 
+/* Dark glass with a red hairline; a little growth creeps in from two corners. */
 .card {
   position: relative;
+  isolation: isolate;
   background: var(--panel);
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   padding: 22px 20px 20px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 28px 60px -30px rgba(0, 0, 0, 0.95),
+    0 0 60px -34px rgba(var(--wake-rgb), 0.55);
+  transition: border-color 0.6s var(--ease-out);
 }
 
-/* A hairline of light along the top edge of every panel. */
+/* The rift's hairline of light along the top edge of every panel. */
 .card::before {
   content: "";
   position: absolute;
@@ -399,8 +583,32 @@ p {
   left: 18px;
   right: 18px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.7), transparent);
   pointer-events: none;
+}
+
+/* Vines from the top-right and bottom-left corners, under the content. The rooms with a frame
+   of their own (tarot, ombre) keep ::after for it. */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(var(--light-rgb), 0.2);
+  -webkit-mask:
+    var(--tex-vines) top right / 132px 132px no-repeat,
+    var(--tex-vines-bl) bottom left / 96px 96px no-repeat;
+  mask:
+    var(--tex-vines) top right / 132px 132px no-repeat,
+    var(--tex-vines-bl) bottom left / 96px 96px no-repeat;
+  pointer-events: none;
+}
+
+/* The login panel is crowned by the letter wall: its top-right vine would tangle with the wire. */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) #register-section.card::after {
+  -webkit-mask: var(--tex-vines-bl) bottom left / 96px 96px no-repeat;
+  mask: var(--tex-vines-bl) bottom left / 96px 96px no-repeat;
 }
 
 .row {
@@ -413,16 +621,77 @@ p {
   font-size: 0.875rem;
 }
 
+/* ---------- Notices and errors: salmon text with an alert mark, never the rift red ---------- */
+
+.notice {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 14px 16px 14px 44px;
+  border-radius: var(--radius-control);
+  border: 1px solid currentColor;
+  background: rgba(36, 10, 14, 0.78);
+}
+
+.notice-error {
+  color: var(--error);
+}
+
+.notice-error::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: var(--icon-alert) center / contain no-repeat;
+  mask: var(--icon-alert) center / contain no-repeat;
+}
+
 .error {
-  margin-top: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
   min-height: 1.6em;
   color: var(--error);
   font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 .error:empty {
   margin-top: 0;
   min-height: 0;
+}
+
+/* The alert mark: the shape tells an error apart from the red of the rift. */
+.error:not(:empty)::before,
+.field-error:not(:empty)::before,
+.save-status.error::before,
+.reveal-message.is-error::before,
+.audio-message:not(:empty)::before {
+  content: "";
+  flex-shrink: 0;
+  width: 1.05em;
+  height: 1.05em;
+  margin-top: 0.2em;
+  background: currentColor;
+  -webkit-mask: var(--icon-alert) center / contain no-repeat;
+  mask: var(--icon-alert) center / contain no-repeat;
+}
+
+code {
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--text);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* ---------- Controls ---------- */
@@ -440,10 +709,11 @@ input[type="password"] {
   background: var(--field);
   border: 1px solid var(--field-edge);
   border-radius: var(--radius-control);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.45);
   transition:
-    border-color 0.4s var(--ease-out),
-    box-shadow 0.4s var(--ease-out),
-    background-color 0.4s var(--ease-out);
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out);
 }
 
 input::placeholder {
@@ -451,58 +721,55 @@ input::placeholder {
   opacity: 1;
 }
 
+/* Focus: the rim catches the rift light (5.8:1 against the panel). */
 input[type="text"]:focus,
 input[type="password"]:focus {
   outline: none;
-  border-color: rgba(var(--light-rgb), 0.8);
-  background: rgba(6, 16, 28, 0.85);
+  border-color: var(--light);
+  background-color: rgba(4, 5, 10, 0.88);
   box-shadow:
-    0 0 0 3px rgba(var(--light-rgb), 0.12),
-    0 0 24px -4px rgba(var(--light-rgb), 0.45);
+    inset 0 2px 8px rgba(0, 0, 0, 0.45),
+    0 0 0 2px rgba(var(--light-rgb), 0.55),
+    0 0 26px -6px rgba(var(--light-rgb), 0.6);
 }
 
+/* Primary: a pane of deep rift red, lit from inside. */
 button {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   min-height: 50px;
-  padding: 12px 20px;
+  padding: 12px 22px;
   font: inherit;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   color: #ffffff;
-  background: var(--wake);
-  border: 1px solid rgba(var(--light-rgb), 0.45);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%),
+    var(--wake);
+  border: 1px solid rgba(var(--light-rgb), 0.55);
   border-radius: var(--radius-control);
-  box-shadow: 0 10px 28px -12px rgba(var(--wake-rgb), 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--sheen-rgb), 0.22),
+    inset 0 -10px 18px -10px rgba(0, 0, 0, 0.45),
+    0 10px 26px -12px rgba(var(--wake-rgb), 0.95),
+    0 0 18px -8px rgba(var(--light-rgb), 0.7);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   touch-action: manipulation;
   transition:
-    transform 0.25s var(--ease-out),
-    box-shadow 0.4s var(--ease-out),
-    border-color 0.4s var(--ease-out);
-}
-
-/* Light sweeping through the button like a wake passing under it. */
-button::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(110deg, transparent 30%, rgba(var(--sheen-rgb), 0.45) 50%, transparent 70%);
-  transform: translateX(-120%);
-  transition: transform 0.8s var(--ease-out);
-  pointer-events: none;
-}
-
-button:hover::after,
-button:focus-visible::after,
-button:active::after {
-  transform: translateX(120%);
+    transform 0.2s var(--ease-out),
+    box-shadow 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
 }
 
 button:hover {
-  box-shadow: 0 12px 32px -10px rgba(var(--wake-rgb), 1);
+  border-color: rgba(var(--light-rgb), 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--sheen-rgb), 0.3),
+    inset 0 -10px 18px -10px rgba(0, 0, 0, 0.35),
+    0 12px 30px -10px rgba(var(--wake-rgb), 1),
+    0 0 26px -6px rgba(var(--light-rgb), 0.85);
 }
 
 button:active {
@@ -520,17 +787,27 @@ button:disabled {
   animation: dim-pulse 1.4s ease-in-out infinite;
 }
 
+@keyframes dim-pulse {
+  50% {
+    opacity: 0.62;
+  }
+}
+
+/* Secondary: an unlit pane, its rim warming on hover. */
 .btn-secondary {
   color: var(--text);
-  background: rgba(3, 6, 11, 0.35);
+  background: rgba(6, 7, 13, 0.45);
   border-color: var(--field-edge);
   box-shadow: none;
   font-weight: 500;
+  letter-spacing: 0.02em;
+  text-shadow: none;
 }
 
 .btn-secondary:hover {
-  border-color: rgba(var(--light-rgb), 0.6);
-  box-shadow: 0 0 20px -6px rgba(var(--light-rgb), 0.5);
+  border-color: rgba(var(--light-rgb), 0.75);
+  background-color: rgba(var(--wake-deep-rgb), 0.16);
+  box-shadow: 0 0 20px -6px rgba(var(--light-rgb), 0.55);
 }
 
 .user-bar .btn-secondary {
@@ -540,17 +817,11 @@ button:disabled {
   border-radius: 999px;
 }
 
-@keyframes dim-pulse {
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 26px -6px rgba(var(--light-rgb), 0.7);
-  }
-}
-
-/* ---------- Loader: a glint of light runs down a small wake, and its head flares ---------- */
+/* ---------- Loader: current runs down a short wire and its tip sparks (static restyle; motion.css
+   may replace the choreography). ---------- */
 
 .loader {
-  --loader-base: rgba(143, 178, 204, 0.3);
+  --loader-base: rgba(var(--ash-rgb), 0.3);
   --loader-light: var(--light);
   --loader-beat: 1.8s;
   display: inline-flex;
@@ -578,7 +849,7 @@ button:disabled {
   stroke-width: 1.4;
 }
 
-/* One dash shorter than the path, starting before it and ending past it: a travelling glint. */
+/* One dash shorter than the path, starting before it and ending past it: a travelling pulse. */
 .loader-haze,
 .loader-glint {
   stroke: var(--loader-light);
@@ -589,7 +860,7 @@ button:disabled {
 
 .loader-haze {
   stroke-width: 4.5;
-  opacity: 0.25;
+  opacity: 0.28;
 }
 
 .loader-glint {
@@ -603,7 +874,7 @@ button:disabled {
   animation: loader-flare var(--loader-beat) ease-out infinite;
 }
 
-/* Plankton beside the wake light up as the glint passes them. */
+/* Ash beside the wire catches the light as the pulse passes it. */
 .loader-speck {
   fill: var(--loader-light);
   opacity: 0.12;
@@ -647,7 +918,7 @@ button:disabled {
   }
 }
 
-/* Reduced motion: the whole wake stays lit and only breathes, still reading as "working". */
+/* Reduced motion: the whole wire stays lit and only breathes, still reading as "working". */
 @keyframes loader-breathe {
   50% {
     opacity: 0.4;
@@ -665,7 +936,7 @@ button.is-pending {
 }
 
 .auth-submit .loader {
-  --loader-base: rgba(var(--foam-rgb), 0.32);
+  --loader-base: rgba(var(--foam-rgb), 0.34);
   --loader-light: var(--foam);
 }
 
@@ -676,7 +947,7 @@ button.is-pending {
   text-overflow: ellipsis;
 }
 
-/* Saved: a ring of light with a check that draws itself. */
+/* Saved: a ring of warm bulb light with a check that draws itself. */
 .check-badge {
   flex-shrink: 0;
   width: 18px;
@@ -685,14 +956,14 @@ button.is-pending {
 }
 
 .badge-ring {
-  fill: rgba(var(--light-rgb), 0.14);
-  stroke: var(--light);
+  fill: rgba(var(--success-rgb), 0.16);
+  stroke: var(--success);
   stroke-width: 1.2;
 }
 
 .badge-check {
   fill: none;
-  stroke: var(--foam);
+  stroke: var(--success);
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -707,7 +978,190 @@ button.is-pending {
   }
 }
 
+/* ---------- Bulbs: one component for every string light ---------- */
+
+/* A small hanging bulb: a socket (::before) and its glass (::after). Unlit it is tinted glass;
+   lit it glows in its own colour, set per bulb with --bulb-rgb. Used by .bulb (lights.js), the
+   tile lights and the progress wire. */
+.bulb,
+.tile-light,
+.progress-line > span {
+  --bulb-rgb: var(--bulb-red-rgb);
+  --bulb-size: 12px;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--bulb-size);
+  height: calc(var(--bulb-size) * 1.5);
+}
+
+.bulb::before,
+.tile-light::before,
+.progress-line > span::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 56%;
+  height: 28%;
+  transform: translateX(-50%);
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(90deg, #171a24, #4a5164 45%, #171a24);
+}
+
+.bulb::after,
+.tile-light::after,
+.progress-line > span::after {
+  content: "";
+  position: absolute;
+  top: 24%;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 1px solid rgba(var(--bulb-rgb), 0.42);
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.28), transparent 34%),
+    radial-gradient(circle at 50% 65%, rgba(var(--bulb-rgb), 0.24), rgba(var(--bulb-rgb), 0.08));
+  transition:
+    background-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out);
+}
+
+/* Lit (motion hook: .is-lit flickers on). */
+.bulb.is-lit::after,
+.tile.is-solved .tile-light::after,
+.progress-line > .is-lit::after {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: radial-gradient(circle at 50% 42%, #ffffff 0 12%, rgba(var(--bulb-rgb), 1) 52%, rgba(var(--bulb-rgb), 0.9));
+  box-shadow:
+    0 0 6px 1px rgba(var(--bulb-rgb), 0.95),
+    0 0 18px 5px rgba(var(--bulb-rgb), 0.42);
+}
+
+/* The string's colours repeat every five bulbs, in the same order everywhere. */
+.tiles > li:nth-child(5n + 2) .tile-light,
+.progress-line > span:nth-child(5n + 2) {
+  --bulb-rgb: var(--bulb-amber-rgb);
+}
+
+.tiles > li:nth-child(5n + 3) .tile-light,
+.progress-line > span:nth-child(5n + 3) {
+  --bulb-rgb: var(--bulb-green-rgb);
+}
+
+.tiles > li:nth-child(5n + 4) .tile-light,
+.progress-line > span:nth-child(5n + 4) {
+  --bulb-rgb: var(--bulb-blue-rgb);
+}
+
+.tiles > li:nth-child(5n) .tile-light,
+.progress-line > span:nth-child(5n) {
+  --bulb-rgb: var(--bulb-pink-rgb);
+}
+
 /* ---------- Login / registration: one form, two modes ---------- */
+
+/* Alphabet wall slot (filled by lights.js, decorative): three rows of nine painted letters, a
+   bulb over each. Sized here so nothing moves when it fills. Cells sit on this grid; a cell is
+   one --wall-row tall (bulb on top, letter below). */
+.letter-wall {
+  --wall-cols: 9;
+  --wall-rows: 3;
+  --wall-row: 2.875rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--wall-cols), minmax(0, 1fr));
+  grid-auto-rows: var(--wall-row);
+  align-items: stretch;
+  justify-items: center;
+  min-height: calc(var(--wall-rows) * var(--wall-row) + 20px);
+  margin: -8px -8px 20px;
+  padding: 10px 6px;
+  border-radius: calc(var(--radius) - 6px);
+  /* A patch of dark painted plaster, lit faintly from above. */
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(var(--ash-rgb), 0.06), transparent 70%),
+    linear-gradient(180deg, rgba(3, 4, 8, 0.5), rgba(3, 4, 8, 0.22));
+  box-shadow: inset 0 0 0 1px rgba(var(--ash-rgb), 0.05);
+  pointer-events: none;
+}
+
+/* Until lights.js fills the slot (or if it never loads): the letters painted on the wall and a
+   dark bulb over each column, so the panel never shows an empty patch. Gone once filled. */
+.letter-wall:empty {
+  background:
+    radial-gradient(circle at 50% 9px, rgba(var(--ash-rgb), 0.32) 0 2.5px, transparent 3.5px) 6px 10px / calc((100% - 12px) / 9) var(--wall-row) repeat-x,
+    radial-gradient(circle at 50% 9px, rgba(var(--ash-rgb), 0.32) 0 2.5px, transparent 3.5px) 6px calc(10px + var(--wall-row)) / calc((100% - 12px) / 9) var(--wall-row) repeat-x,
+    radial-gradient(circle at 50% 9px, rgba(var(--ash-rgb), 0.32) 0 2.5px, transparent 3.5px) 6px calc(10px + 2 * var(--wall-row)) / calc((100% - 12px) / 9) var(--wall-row) repeat-x,
+    radial-gradient(120% 90% at 50% 0%, rgba(var(--ash-rgb), 0.06), transparent 70%),
+    linear-gradient(180deg, rgba(3, 4, 8, 0.5), rgba(3, 4, 8, 0.22));
+}
+
+.letter-wall:empty::before {
+  content: "A B C D E F G H I\A J K L M N O P Q R\A S T U V W X Y Z \A0";
+  grid-column: 1 / -1;
+  grid-row: 1 / span 3;
+  justify-self: stretch;
+  padding: 7px calc((100% / 9 - 1em) / 2) 0;
+  white-space: pre-line;
+  text-align: justify;
+  text-align-last: justify;
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  line-height: var(--wall-row);
+  color: rgba(236, 230, 221, 0.6);
+}
+
+/* Suggested cell parts for lights.js: a bulb, then the letter painted by hand. */
+.letter-wall .wall-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+
+.letter-wall .bulb {
+  --bulb-size: 11px;
+}
+
+.letter-wall .wall-letter {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  line-height: 1;
+  color: rgba(236, 230, 221, 0.82);
+  transform: rotate(var(--tilt, 0deg));
+}
+
+/* Phones: a lower wall and a shorter gap under the sign, so "Accedi" stays in the thumb zone
+   (lights.js measures the sockets, so the wire follows). */
+@media (max-width: 559px) {
+  body:not(.is-playing) .site-header {
+    padding-bottom: 10px;
+  }
+
+  /* The reflection still shows: it fades out within about half of this. */
+  body:not(.is-playing) .title {
+    margin-bottom: 0.56em;
+  }
+
+  .letter-wall {
+    --wall-row: 2.625rem;
+    min-height: calc(var(--wall-rows) * var(--wall-row) + 16px);
+    margin-bottom: 14px;
+    padding-block: 8px;
+  }
+
+  .letter-wall .wall-letter,
+  .letter-wall:empty::before {
+    font-size: 1.2rem;
+  }
+}
 
 .auth-form {
   display: flex;
@@ -727,9 +1181,10 @@ button.is-pending {
   border: 1px solid var(--field-edge);
   border-radius: 999px;
   background: var(--field);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
-/* The lit half slides under the chosen mode. */
+/* A pane of lit red glass slides under the chosen mode. */
 .mode-switch::before {
   content: "";
   position: absolute;
@@ -737,10 +1192,12 @@ button.is-pending {
   bottom: 4px;
   left: 4px;
   width: calc(50% - 4px);
-  border: 1px solid rgba(var(--light-rgb), 0.5);
+  border: 1px solid rgba(var(--light-rgb), 0.6);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(var(--wake-rgb), 0.34), rgba(var(--wake-deep-rgb), 0.2));
-  box-shadow: inset 0 -1px 0 rgba(var(--light-rgb), 0.45);
+  background: linear-gradient(180deg, rgba(var(--wake-rgb), 0.42), rgba(var(--wake-deep-rgb), 0.3));
+  box-shadow:
+    inset 0 1px 0 rgba(var(--sheen-rgb), 0.25),
+    0 0 18px -4px rgba(var(--light-rgb), 0.55);
   transition: transform 0.45s var(--ease-out);
   pointer-events: none;
 }
@@ -776,8 +1233,9 @@ button.is-pending {
 }
 
 .mode-option input:checked + span {
-  color: var(--text);
+  color: #ffffff;
   font-weight: 600;
+  text-shadow: 0 0 12px rgba(var(--light-rgb), 0.6);
 }
 
 .mode-option:hover input:not(:checked):not(:disabled) + span {
@@ -800,14 +1258,18 @@ button.is-pending {
   gap: 8px;
 }
 
+/* Typed labels, like a form filled on a typewriter. */
 .field-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-family: var(--type);
+  font-size: 0.9375rem;
+  letter-spacing: 0.03em;
   color: var(--muted);
 }
 
 .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   font-size: 0.9rem;
   line-height: 1.45;
   color: var(--error);
@@ -850,13 +1312,10 @@ input[aria-invalid="true"]:focus {
   color: var(--muted);
   background: transparent;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: none;
+  text-shadow: none;
   transform: translateY(-50%);
-}
-
-.password-toggle::after {
-  display: none;
 }
 
 .password-toggle:hover {
@@ -896,7 +1355,7 @@ input[aria-invalid="true"]:focus {
   margin-top: 4px;
 }
 
-/* ---------- Riddles ---------- */
+/* ---------- Riddles: index ---------- */
 
 .puzzles-status:empty {
   display: none;
@@ -905,9 +1364,8 @@ input[aria-invalid="true"]:focus {
 .puzzles-status {
   padding: 32px 0;
   text-align: center;
-  font-family: var(--display);
-  font-weight: 300;
-  font-size: 1.25rem;
+  font-family: var(--type);
+  font-size: 1.0625rem;
   animation: breathe 2.4s ease-in-out infinite;
 }
 
@@ -934,70 +1392,69 @@ input[aria-invalid="true"]:focus {
   stroke-linejoin: round;
 }
 
-/* Index: the collected clues, counted and drawn as a line of light. */
+/* The collected clues: a heading, a typed count, and a string of lights (one bulb per riddle). */
 .progress {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
   column-gap: 16px;
-  margin: 16px 0 28px;
+  margin: 18px 0 22px;
 }
 
 .progress-title {
   margin: 0;
-  font-size: clamp(1.9rem, 8.5vw, 2.5rem);
-  font-weight: 200;
-  line-height: 1.1;
-  text-shadow: 0 0 18px rgba(var(--light-rgb), 0.3);
+  font-size: clamp(1.9rem, 8.6vw, 2.6rem);
+  font-weight: 750;
+  line-height: 1.05;
+  text-shadow: 0 0 26px rgba(var(--light-rgb), 0.28);
 }
 
+/* Sits on the bare storm: a dark halo keeps it readable when the sky pulses or lightning hits. */
 .progress-count {
-  font-family: var(--display);
-  font-weight: 300;
-  font-size: 1.25rem;
-  letter-spacing: 0.06em;
+  font-family: var(--type);
+  font-size: 1.1875rem;
+  letter-spacing: 0.04em;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-shadow: 0 0 3px var(--abyss), 0 0 8px var(--abyss);
 }
 
+/* The neon's pale edge, not the rift red: red on the red-lit sky fell under 4.5:1. */
 .progress-found {
-  font-weight: 400;
-  color: var(--light);
-  text-shadow: 0 0 12px rgba(var(--light-rgb), 0.6);
+  color: var(--neon-edge);
+  text-shadow:
+    0 0 3px var(--abyss),
+    0 0 8px var(--abyss),
+    0 0 12px rgba(var(--light-rgb), 0.35);
 }
 
-/* One segment per riddle, in the same order as the tiles. */
+/* The wire: one bulb per riddle, in the same order as the tiles. Motion hook: lights.js may
+   replace it with its own string; .is-fresh is the clue just collected (flickers on). */
 .progress-line {
+  position: relative;
   grid-column: 1 / -1;
   display: flex;
-  gap: 6px;
-  margin-top: 16px;
+  justify-content: space-around;
+  align-items: flex-start;
+  margin-top: 14px;
+  padding: 0 6px;
+  height: 26px;
 }
 
-.progress-line span {
-  flex: 1;
-  height: 2px;
+.progress-line::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 0;
+  right: 0;
+  height: 1.5px;
   border-radius: 2px;
-  background: rgba(143, 178, 204, 0.2);
+  background: linear-gradient(90deg, transparent, #3a4152 8%, #2a303e 50%, #3a4152 92%, transparent);
 }
 
-.progress-line .is-lit {
-  background: linear-gradient(90deg, var(--wake-bright), var(--light));
-  box-shadow: 0 0 8px rgba(var(--light-rgb), 0.65);
-}
-
-/* The clue just collected draws itself into the line. */
-.progress-line .is-fresh {
-  transform-origin: left center;
-  animation: kindle 1.4s var(--ease-out) 0.35s backwards;
-}
-
-@keyframes kindle {
-  from {
-    transform: scaleX(0);
-    box-shadow: none;
-  }
+.progress-line > span {
+  --bulb-size: 12px;
 }
 
 .route-notice {
@@ -1006,6 +1463,7 @@ input[aria-invalid="true"]:focus {
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius-control);
   background: var(--panel);
+  font-family: var(--type);
   font-size: 0.95rem;
 }
 
@@ -1018,19 +1476,22 @@ input[aria-invalid="true"]:focus {
   list-style: none;
 }
 
-/* Each tile is one tap target: light, title and clue, chevron. */
+/* Each tile is one tap target: its bulb, title and clue, chevron. */
 .tile {
+  --bulb-rgb: var(--bulb-red-rgb);
   position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 14px;
-  min-height: 80px;
+  min-height: 84px;
   padding: 16px 12px 16px 18px;
   color: var(--text);
   text-decoration: none;
-  background: rgba(10, 20, 34, 0.42);
-  border: 1px solid rgba(143, 178, 204, 0.12);
+  background: rgba(10, 12, 21, 0.58);
+  border: 1px solid rgba(var(--ash-rgb), 0.12);
   border-radius: var(--radius);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -1043,27 +1504,41 @@ input[aria-invalid="true"]:focus {
 }
 
 .tile.is-solved {
-  background: var(--panel);
+  background-color: var(--panel);
   border-color: var(--panel-edge);
-  box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.9);
 }
 
-/* The panel's hairline of light, only on collected clues. */
+/* A collected clue's bulb throws a little light on its own glass. */
 .tile.is-solved::before {
   content: "";
   position: absolute;
-  top: -1px;
-  left: 18px;
-  right: 18px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.55), transparent);
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(70px 60px at 25px 26px, rgba(var(--bulb-rgb), 0.16), transparent 70%);
   pointer-events: none;
 }
 
+.tiles > li:nth-child(5n + 2) .tile {
+  --bulb-rgb: var(--bulb-amber-rgb);
+}
+
+.tiles > li:nth-child(5n + 3) .tile {
+  --bulb-rgb: var(--bulb-green-rgb);
+}
+
+.tiles > li:nth-child(5n + 4) .tile {
+  --bulb-rgb: var(--bulb-blue-rgb);
+}
+
+.tiles > li:nth-child(5n) .tile {
+  --bulb-rgb: var(--bulb-pink-rgb);
+}
+
 .tile:hover {
-  background: rgba(14, 28, 46, 0.7);
-  border-color: rgba(var(--light-rgb), 0.4);
-  box-shadow: 0 18px 40px -24px rgba(var(--wake-rgb), 0.75);
+  background-color: rgba(18, 20, 33, 0.78);
+  border-color: rgba(var(--light-rgb), 0.45);
+  box-shadow: 0 18px 40px -24px rgba(var(--wake-rgb), 0.8);
 }
 
 .tile:active {
@@ -1071,23 +1546,11 @@ input[aria-invalid="true"]:focus {
   transition-duration: 0.1s;
 }
 
-/* Dark: a hollow ring. Collected: a living point of light. */
-/* Sits on the title's first line, however many lines the title takes. */
+/* The bulb hangs at the title's first line, however many lines the title takes. */
 .tile-light {
+  --bulb-size: 14px;
   align-self: start;
-  margin-top: 8px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1px solid rgba(143, 178, 204, 0.5);
-}
-
-.tile.is-solved .tile-light {
-  border-color: transparent;
-  background: var(--foam);
-  box-shadow:
-    0 0 0 3px rgba(var(--light-rgb), 0.14),
-    0 0 12px 2px var(--light);
+  margin-top: 3px;
 }
 
 .tile-body {
@@ -1100,9 +1563,10 @@ input[aria-invalid="true"]:focus {
 .tile-title {
   margin: 0;
   font-family: var(--display);
-  font-weight: 300;
-  font-size: clamp(1.2rem, 5.6vw, 1.375rem);
-  line-height: 1.2;
+  font-weight: 650;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: clamp(1.25rem, 5.8vw, 1.45rem);
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
@@ -1113,14 +1577,15 @@ input[aria-invalid="true"]:focus {
   overflow-wrap: anywhere;
 }
 
-/* The collected answer, kept to two lines on the index. */
+/* The collected answer, typed on the tile in lamp-lit ink and kept to two lines. */
 .tile.is-solved .tile-clue {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  font-weight: 500;
+  font-family: var(--type);
+  font-size: 1rem;
   color: var(--light-text);
 }
 
@@ -1137,32 +1602,93 @@ input[aria-invalid="true"]:focus {
   transform: translateX(3px);
 }
 
-/* Locked: the ring waits, breathing faintly, while the time runs down. */
+/* Locked (timed or sealed): behind the rift. The bulb is dark, growth creeps in from the right
+   edge over a red membrane glow that breathes slowly (motion hook: .tile.is-locked::before). */
+.tile.is-locked {
+  background-color: rgba(8, 9, 16, 0.66);
+  border-color: rgba(var(--light-rgb), 0.16);
+}
+
 .tile.is-locked .tile-title {
   color: var(--muted);
 }
 
-.tile.is-locked .tile-light {
-  border-color: rgba(var(--light-rgb), 0.5);
-  animation: tile-wait 3.2s ease-in-out infinite;
+.tile.is-locked .tile-light::after {
+  border-color: rgba(var(--ash-rgb), 0.22);
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.12), transparent 34%),
+    rgba(var(--ash-rgb), 0.05);
 }
 
-@keyframes tile-wait {
+.tile.is-locked::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(55% 140% at 100% 50%, rgba(var(--light-rgb), 0.17), transparent 72%);
+  animation: rift-breathe var(--pulse-duration) ease-in-out infinite;
+  pointer-events: none;
+}
+
+.tile.is-locked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(var(--light-rgb), 0.3);
+  -webkit-mask: var(--tex-tangle) right center / auto 100% no-repeat;
+  mask: var(--tex-tangle) right center / auto 100% no-repeat;
+  pointer-events: none;
+}
+
+/* The growth never repeats exactly from one tile to the next. */
+.tiles > li:nth-child(3n + 2) .tile.is-locked::after {
+  -webkit-mask-position: right -18px top 30%;
+  mask-position: right -18px top 30%;
+}
+
+.tiles > li:nth-child(3n) .tile.is-locked::after {
+  -webkit-mask-position: right -34px bottom 20%;
+  mask-position: right -34px bottom 20%;
+}
+
+/* Sealed (no countdown): overgrown further, the growth reaching across the title. */
+.tile.is-locked:not(:has(.tile-countdown))::after {
+  background: rgba(var(--light-rgb), 0.36);
+  -webkit-mask-size: auto 135%;
+  mask-size: auto 135%;
+}
+
+.tile.is-locked:not(:has(.tile-countdown)) .tile-clue {
+  font-family: var(--type);
+  letter-spacing: 0.02em;
+}
+
+.tile.is-locked:hover::before {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes rift-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
   50% {
-    border-color: rgba(var(--light-rgb), 0.9);
-    box-shadow: 0 0 10px 1px rgba(var(--light-rgb), 0.45);
+    opacity: 1;
   }
 }
 
 .tile-countdown {
+  font-family: var(--type);
   color: var(--light);
-  font-weight: 500;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Riddle page */
+/* ---------- Riddle page ---------- */
+
 .riddle-nav {
   display: flex;
   align-items: center;
@@ -1182,6 +1708,8 @@ input[aria-invalid="true"]:focus {
   color: var(--muted);
   font-weight: 500;
   text-decoration: none;
+  /* On the bare canvas: the halo holds the contrast through lightning. */
+  text-shadow: 0 0 3px var(--abyss), 0 0 8px var(--abyss);
   touch-action: manipulation;
   transition: color 0.4s var(--ease-out);
 }
@@ -1199,41 +1727,48 @@ input[aria-invalid="true"]:focus {
   transform: scaleX(-1) translateX(3px);
 }
 
-/* Where this riddle sits in the hunt: "I di II". */
+/* Where this riddle sits in the hunt: "I di II", typed. */
 .riddle-position {
-  /* Josefin sits high in its line box: nudged onto the back link's baseline. */
-  padding: 3px 4px 0 0;
-  font-family: var(--display);
-  font-weight: 400;
+  padding-right: 4px;
+  font-family: var(--type);
   font-size: 1.0625rem;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--muted);
   white-space: nowrap;
+  text-shadow: 0 0 3px var(--abyss), 0 0 8px var(--abyss);
 }
 
+/* Pale neon edge over a dark halo: the rift red itself is too dark on the red-lit storm. */
 .riddle-position-current {
-  font-weight: 400;
-  color: var(--light);
+  color: var(--neon-edge);
+  text-shadow:
+    0 0 3px var(--abyss),
+    0 0 8px var(--abyss),
+    0 0 12px rgba(var(--light-rgb), 0.35);
 }
 
 .riddle-head {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .riddle-title {
   margin: 0;
-  font-size: clamp(2.1rem, 10vw, 2.75rem);
-  font-weight: 200;
-  line-height: 1.1;
-  text-shadow: 0 0 18px rgba(var(--light-rgb), 0.3);
+  font-size: clamp(2.25rem, 10.5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-shadow:
+    0 0 1px rgba(var(--sheen-rgb), 0.4),
+    0 0 30px rgba(var(--light-rgb), 0.38);
 }
 
 .riddle-subtitle {
   margin-top: 10px;
   max-width: 40ch;
   font-family: var(--display);
-  font-weight: 300;
+  font-weight: 400;
   font-style: italic;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
   font-size: 1.25rem;
   line-height: 1.35;
   color: var(--light-text);
@@ -1253,7 +1788,7 @@ input[aria-invalid="true"]:focus {
   display: none;
 }
 
-/* The player is the riddle: a small label and a wake hairline name it. */
+/* The player is the riddle: a typed label and a wire name it. */
 .riddle-media {
   margin-bottom: 28px;
 }
@@ -1266,10 +1801,11 @@ input[aria-invalid="true"]:focus {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  font-family: var(--type);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -1277,7 +1813,7 @@ input[aria-invalid="true"]:focus {
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(var(--light-rgb), 0.35), transparent);
+  background: linear-gradient(90deg, rgba(var(--light-rgb), 0.45), transparent);
 }
 
 /* Optional hint, folded until asked for. */
@@ -1330,24 +1866,24 @@ input[aria-invalid="true"]:focus {
   max-width: 62ch;
   margin-top: 4px;
   padding-left: 14px;
-  border-left: 1px solid rgba(var(--light-rgb), 0.35);
+  border-left: 1px dashed rgba(var(--light-rgb), 0.5);
   white-space: pre-line;
   line-height: 1.6;
   overflow-wrap: break-word;
 }
 
-/* The answer sits apart from the riddle, behind a faint line of water. */
+/* The answer sits apart from the riddle, under a faint tear line. */
 .answer-form {
   padding-top: 20px;
-  border-top: 1px solid rgba(143, 178, 204, 0.14);
+  border-top: 1px dashed rgba(var(--ash-rgb), 0.2);
 }
 
 .answer-label {
   display: block;
   margin-bottom: 10px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-family: var(--type);
+  font-size: 0.9375rem;
+  letter-spacing: 0.03em;
   color: var(--muted);
 }
 
@@ -1357,21 +1893,25 @@ input[aria-invalid="true"]:focus {
   gap: 8px;
   margin-top: 10px;
   min-height: 1.5em;
-  font-size: 0.9rem;
+  font-family: var(--type);
+  font-size: 0.9375rem;
   line-height: 1.5; /* text, loader and badge all fit the reserved line: no jump */
   color: var(--muted);
 }
 
 .save-status.ok {
-  color: var(--light);
-  text-shadow: 0 0 12px rgba(var(--light-rgb), 0.55);
+  color: var(--success);
+  text-shadow: 0 0 12px rgba(var(--success-rgb), 0.5);
 }
 
 .save-status.error {
+  align-items: flex-start;
+  font-family: var(--body);
+  font-size: 0.9rem;
   color: var(--error);
 }
 
-/* ---------- Riddle media: an orb of light that sends pulses down its wake ---------- */
+/* ---------- Riddle media: a bulb that lights while it plays, and a wire carrying the current ---------- */
 
 /* The orb carries the light around its button: halo, ripples, searching arc. */
 .orb {
@@ -1398,14 +1938,15 @@ input[aria-invalid="true"]:focus {
   opacity: 0;
 }
 
-/* Halo: the water around the orb glows. */
+/* Halo: the air around the lamp glows. */
 .orb::after {
   inset: -16px;
-  background: radial-gradient(closest-side, rgba(var(--light-rgb), 0.36), rgba(var(--wake-rgb), 0.16) 60%, transparent);
+  background: radial-gradient(closest-side, rgba(var(--light-rgb), 0.42), rgba(var(--wake-rgb), 0.16) 60%, transparent);
   opacity: 0;
-  transition: opacity 0.9s var(--ease-out);
+  transition: opacity 0.6s var(--ease-out);
 }
 
+/* Off: a globe of dark red glass with a socket ring. */
 .orb-button {
   display: grid;
   place-items: center;
@@ -1415,11 +1956,16 @@ input[aria-invalid="true"]:focus {
   padding: 0;
   border-radius: 50%;
   color: var(--foam);
-  background: radial-gradient(circle at 50% 35%, var(--wake-bright), var(--wake) 70%);
-  border-color: var(--light-soft);
+  background:
+    radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.3), transparent 26%),
+    radial-gradient(circle at 50% 55%, var(--wake) 30%, rgba(var(--wake-deep-rgb), 0.85) 62%, var(--abyss) 100%);
+  border-color: rgba(var(--light-rgb), 0.55);
   box-shadow:
-    0 8px 22px -10px rgba(var(--wake-rgb), 0.95),
-    0 0 18px -6px rgba(var(--light-rgb), 0.45);
+    inset 0 -6px 12px rgba(0, 0, 0, 0.5),
+    0 0 0 3px rgba(6, 7, 13, 0.7),
+    0 0 0 4px rgba(var(--ash-rgb), 0.16),
+    0 0 18px -6px rgba(var(--light-rgb), 0.6);
+  text-shadow: none;
   transition:
     transform 0.25s var(--ease-out),
     box-shadow 0.4s var(--ease-out),
@@ -1429,11 +1975,13 @@ input[aria-invalid="true"]:focus {
 
 .orb-button:hover {
   box-shadow:
-    0 10px 26px -8px rgba(var(--wake-rgb), 1),
-    0 0 24px -4px rgba(var(--light-rgb), 0.6);
+    inset 0 -6px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 3px rgba(6, 7, 13, 0.7),
+    0 0 0 4px rgba(var(--light-rgb), 0.35),
+    0 0 26px -4px rgba(var(--light-rgb), 0.75);
 }
 
-/* Press: the orb gives under the thumb, quickly. */
+/* Press: the lamp gives under the thumb, quickly. */
 .orb-button:active {
   transform: scale(0.9);
   transition-duration: 0.1s;
@@ -1445,7 +1993,7 @@ input[aria-invalid="true"]:focus {
   width: 22px;
   height: 22px;
   fill: currentColor;
-  filter: drop-shadow(0 0 4px rgba(var(--foam-rgb), 0.6));
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
   transition:
     opacity 0.2s var(--ease-out),
     transform 0.35s var(--ease-out);
@@ -1480,10 +2028,24 @@ input[aria-invalid="true"]:focus {
   transform: none;
 }
 
-/* Sounding: the orb is fully lit and the water around it glows. */
+/* Sounding: the lamp is lit, white-hot at the core; the icon becomes its dark filament. */
 .audio-player.is-sounding .audio-toggle,
 .video-player.is-sounding .video-toggle {
-  border-color: rgba(var(--light-rgb), 0.8);
+  color: var(--abyss);
+  border-color: rgba(var(--foam-rgb), 0.6);
+  background:
+    radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.5), transparent 24%),
+    radial-gradient(circle at 50% 50%, rgba(var(--foam-rgb), 1) 0 16%, rgba(var(--sheen-rgb), 1) 34%, var(--light) 62%, var(--wake) 100%);
+  box-shadow:
+    inset 0 -4px 10px rgba(0, 0, 0, 0.25),
+    0 0 0 3px rgba(6, 7, 13, 0.7),
+    0 0 0 4px rgba(var(--light-rgb), 0.4),
+    0 0 26px 2px rgba(var(--light-rgb), 0.65);
+}
+
+.audio-player.is-sounding .audio-toggle .media-icon,
+.video-player.is-sounding .video-toggle .media-icon {
+  filter: none;
 }
 
 .audio-player.is-sounding .audio-orb::after,
@@ -1492,7 +2054,7 @@ input[aria-invalid="true"]:focus {
   opacity: 1;
 }
 
-/* Rings of light leave the orb: while the audio sounds, or while the video waits for its first play. */
+/* Rings of light leave the lamp: while the audio sounds, or while the video waits for its first play. */
 .audio-player.is-sounding:not(.is-loading) .audio-orb::before,
 .video-player:not(.is-started):not(.is-loading):not(.is-error) .video-big-orb::before {
   border: 1px solid rgba(var(--light-rgb), 0.7);
@@ -1512,7 +2074,7 @@ input[aria-invalid="true"]:focus {
   }
 }
 
-/* Buffering: a light circles the orb, searching the dark; the button stays pressable. */
+/* Buffering: a light circles the lamp, searching the dark; the button stays pressable. */
 .audio-player.is-loading .audio-orb::before,
 .video-player.is-loading .video-big-orb::before {
   inset: -5px;
@@ -1534,7 +2096,7 @@ input[aria-invalid="true"]:focus {
   }
 }
 
-/* Error: the light goes out quietly; the message below says why. */
+/* Error: the lamp goes out quietly; the message below says why. */
 .audio-player.is-error .orb-button,
 .video-player.is-error .orb-button {
   animation: none;
@@ -1559,10 +2121,10 @@ input[aria-invalid="true"]:focus {
   cursor: default;
 }
 
-/* The range stays 44px tall for touch; only a 3px wake is drawn inside it. It takes no
+/* The range stays 44px tall for touch; only a 3px wire is drawn inside it. It takes no
    pointers itself (iPhone only drags its thumb), only the keyboard and screen readers. */
 .wake-seek {
-  --wake-fill: linear-gradient(90deg, var(--wake-bright), var(--light));
+  --wake-fill: linear-gradient(90deg, rgba(var(--wake-deep-rgb), 1), var(--light) 72%, rgba(var(--sheen-rgb), 1));
   display: block;
   width: 100%;
   height: 44px;
@@ -1577,37 +2139,38 @@ input[aria-invalid="true"]:focus {
   outline: none;
 }
 
+/* The dead wire is grey rubber (about 3:1 on the panel); the played stretch carries the current. */
 .wake-seek::-webkit-slider-runnable-track {
   height: 3px;
   border-radius: 3px;
   background:
     var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
-    rgba(143, 178, 204, 0.22);
-  box-shadow: 0 0 10px -2px rgba(var(--light-rgb), 0.45);
+    linear-gradient(#5f6678, #454b5b);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .wake-seek::-moz-range-track {
   height: 3px;
   border-radius: 3px;
-  background: rgba(143, 178, 204, 0.22);
+  background: linear-gradient(#5f6678, #454b5b);
 }
 
 .wake-seek::-moz-range-progress {
   height: 3px;
   border-radius: 3px;
   background: var(--wake-fill);
-  box-shadow: 0 0 10px -2px rgba(var(--light-rgb), 0.6);
+  box-shadow: 0 0 10px -1px rgba(var(--light-rgb), 0.7);
 }
 
-/* The thumb is the wake's bright head. */
+/* The thumb is the spark at the end of the current. 14px: app.js measures with it. */
 .wake-seek::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   margin-top: -5.5px;
   border: 0;
   border-radius: 50%;
-  background: var(--foam);
-  box-shadow: 0 0 10px 1px var(--light);
+  background: radial-gradient(circle, #ffffff 0 22%, rgba(var(--sheen-rgb), 1) 42%, var(--light) 78%);
+  box-shadow: 0 0 10px 2px rgba(var(--light-rgb), 0.85);
   -webkit-appearance: none;
   appearance: none;
   transition: box-shadow 0.3s var(--ease-out), transform 0.25s var(--ease-out);
@@ -1618,8 +2181,8 @@ input[aria-invalid="true"]:focus {
   height: 14px;
   border: 0;
   border-radius: 50%;
-  background: var(--foam);
-  box-shadow: 0 0 10px 1px var(--light);
+  background: radial-gradient(circle, #ffffff 0 22%, rgba(var(--sheen-rgb), 1) 42%, var(--light) 78%);
+  box-shadow: 0 0 10px 2px rgba(var(--light-rgb), 0.85);
   transition: box-shadow 0.3s var(--ease-out), transform 0.25s var(--ease-out);
 }
 
@@ -1656,7 +2219,8 @@ input[aria-invalid="true"]:focus {
   box-shadow: none;
 }
 
-/* A glint of light runs along the played wake, from the orb to the head... */
+/* The live stretch of wire glows softly (the track itself cannot), and while it sounds a pulse
+   of current runs along it from the lamp to the spark. */
 .wake-glint {
   position: absolute;
   top: 50%;
@@ -1665,6 +2229,8 @@ input[aria-invalid="true"]:focus {
   height: 10px;
   margin-top: -5px;
   overflow: hidden;
+  border-radius: 5px;
+  background: radial-gradient(100% 50% at 50% 50%, rgba(var(--light-rgb), 0.22), transparent 70%);
   pointer-events: none;
 }
 
@@ -1672,7 +2238,7 @@ input[aria-invalid="true"]:focus {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(closest-side, #f2feff, rgba(var(--light-rgb), 0.55) 45%, transparent) 100% 50% / 40px 100% no-repeat;
+  background: radial-gradient(closest-side, #ffffff, rgba(var(--light-rgb), 0.6) 45%, transparent) 100% 50% / 40px 100% no-repeat;
   opacity: 0;
   transform: translateX(-100%);
 }
@@ -1681,7 +2247,7 @@ input[aria-invalid="true"]:focus {
   animation: wake-glint var(--pulse, 2.8s) cubic-bezier(0.5, 0, 0.3, 1) infinite;
 }
 
-/* ...and the head flares as the glint reaches it (unless the focus ring is showing). */
+/* ...and the spark flares as the pulse reaches it (unless the focus ring is showing). */
 .is-sounding:not(.is-loading) .wake-seek:not(:focus-visible)::-webkit-slider-thumb {
   animation: wake-flare var(--pulse, 2.8s) ease-out infinite;
 }
@@ -1713,7 +2279,7 @@ input[aria-invalid="true"]:focus {
   0%,
   52%,
   100% {
-    box-shadow: 0 0 10px 1px var(--light);
+    box-shadow: 0 0 10px 2px rgba(var(--light-rgb), 0.85);
   }
   64% {
     box-shadow: 0 0 18px 5px var(--light);
@@ -1724,7 +2290,8 @@ input[aria-invalid="true"]:focus {
   display: flex;
   justify-content: space-between;
   margin-top: -8px;
-  font-size: 0.8125rem;
+  font-family: var(--type);
+  font-size: 0.875rem;
   line-height: 1.4;
   letter-spacing: 0.04em;
   color: var(--muted);
@@ -1740,14 +2307,14 @@ input[aria-invalid="true"]:focus {
   text-shadow: 0 0 10px rgba(var(--light-rgb), 0.45);
 }
 
-/* Audio: the orb beside its wake. */
+/* Audio: the lamp beside its wire. */
 .audio-player {
-  /* One beat while sounding: the orb ripples, light runs down the wake, the head flares. */
+  /* One beat while sounding: the lamp ripples, current runs down the wire, the spark flares. */
   --pulse: 2.8s;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  column-gap: 14px;
+  column-gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -1763,8 +2330,11 @@ input[aria-invalid="true"]:focus {
 }
 
 .audio-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   grid-column: 1 / -1;
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 0.9rem;
   color: var(--error);
 }
@@ -1773,7 +2343,7 @@ input[aria-invalid="true"]:focus {
   display: none;
 }
 
-/* ---------- Timed riddle: countdown, then the video surfaces ---------- */
+/* ---------- Locked riddle: countdown or seal, then the video crosses over ---------- */
 
 /* A file on its way or a video on the page: a pull down at the top must not reload the page
    (the download would start over). On both elements: browsers differ on which one sets it. */
@@ -1798,29 +2368,43 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   padding: 4px 0 8px;
 }
 
+/* The countdown in display figures, lit from behind by the rift. */
 .countdown {
   font-family: var(--display);
-  font-weight: 200;
+  font-weight: 600;
+  font-variation-settings: "SOFT" 100, "WONK" 0;
   font-size: clamp(2.75rem, 15vw, 4.25rem);
   line-height: 1;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
   color: var(--text);
   text-shadow:
-    0 0 1px rgba(230, 244, 255, 0.9),
-    0 0 24px rgba(var(--light-rgb), 0.4);
+    0 0 2px rgba(var(--sheen-rgb), 0.35),
+    0 0 28px rgba(var(--light-rgb), 0.5);
 }
 
-/* A day or more away: "2g 03:04:05" needs a smaller size to fit a phone. */
+/* Fraunces has no tabular figures: the ticking clock sits in a box as wide as its widest
+   reading, text anchored left, so the numbers never shift the line around each second. */
+.countdown:not(.is-sealed) {
+  display: inline-block;
+  min-width: 4.5em;
+  text-align: left;
+}
+
+/* A day or more away: "2g 03:04:05" needs a smaller size to fit a phone. The box is as wide as
+   the widest reading ("2g 00:00:00", 5.82em), so the clock sits as close to centre as it can. */
 .countdown.is-long {
+  min-width: 5.85em;
   font-size: clamp(2rem, 10.5vw, 3.25rem);
 }
 
 .countdown-when {
   margin-top: 12px;
+  font-family: var(--type);
+  font-size: 1rem;
+  line-height: 1.5;
   color: var(--muted);
-  font-size: 0.95rem;
 }
 
 .reveal-loader {
@@ -1829,12 +2413,13 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 
 .reveal-loader-title {
   font-family: var(--display);
-  font-weight: 300;
-  font-size: 1.25rem;
+  font-weight: 500;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: 1.3rem;
   animation: breathe 2.4s ease-in-out infinite;
 }
 
-/* The download draws a wake of light, like the audio seek bar. */
+/* The download runs current along a wire, like the seek bar. */
 .reveal-bar {
   --progress: 0;
   position: relative;
@@ -1842,7 +2427,7 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   margin: 14px 0 10px;
   overflow: hidden;
   border-radius: 3px;
-  background: rgba(143, 178, 204, 0.22);
+  background: linear-gradient(#323848, #1a1e29);
 }
 
 .reveal-bar::before {
@@ -1850,14 +2435,14 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   position: absolute;
   inset: 0;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--wake-bright), var(--light));
+  background: linear-gradient(90deg, rgba(var(--wake-deep-rgb), 1), var(--light) 80%, rgba(var(--sheen-rgb), 1));
   box-shadow: 0 0 10px rgba(var(--light-rgb), 0.6);
   transform: scaleX(var(--progress));
   transform-origin: left center;
   transition: transform 0.3s var(--ease-out);
 }
 
-/* Unknown size: a stretch of light keeps travelling along the line. */
+/* Unknown size: a stretch of current keeps travelling along the wire. */
 .reveal-bar.is-indeterminate::before {
   right: auto;
   width: 35%;
@@ -1874,7 +2459,8 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 }
 
 .reveal-amount {
-  font-size: 0.8125rem;
+  font-family: var(--type);
+  font-size: 0.875rem;
   letter-spacing: 0.04em;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -1909,15 +2495,24 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 
 .reveal-hint {
   margin-top: 6px;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  font-family: var(--type);
+  font-size: 0.8125rem;
+  letter-spacing: 0.03em;
   color: var(--muted);
 }
 
 .reveal-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   margin-top: 8px;
   font-size: 0.95rem;
   color: var(--muted);
+}
+
+.reveal-loader:has(.reveal-crystal) ~ .reveal-message {
+  justify-content: center;
+  text-align: center;
 }
 
 .reveal-message.is-error {
@@ -1934,7 +2529,7 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   padding: 8px 20px;
 }
 
-/* Flag riddle: a seal glowing slowly until the organizer's signal opens it. */
+/* Flag riddle: sealed until the organizer's signal opens it (the rooms restyle this). */
 .countdown.is-sealed {
   font-size: clamp(2.5rem, 13vw, 3.75rem);
   letter-spacing: 0.08em;
@@ -1944,8 +2539,8 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 @keyframes seal-glow {
   50% {
     text-shadow:
-      0 0 1px rgba(230, 244, 255, 0.9),
-      0 0 36px rgba(var(--light-rgb), 0.7);
+      0 0 2px rgba(var(--sheen-rgb), 0.5),
+      0 0 38px rgba(var(--light-rgb), 0.75);
   }
 }
 
@@ -1959,11 +2554,12 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 
 .seal-check {
   min-height: 44px;
-  padding: 8px 20px;
+  padding: 8px 22px;
 }
 
 .seal-checked {
-  font-size: 0.8125rem;
+  font-family: var(--type);
+  font-size: 0.875rem;
   letter-spacing: 0.02em;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -1971,6 +2567,175 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 
 .seal-checked:empty {
   display: none;
+}
+
+/* The gate (the Sottosopra and the green sea; tarot and ombre build their own below). A locked
+   riddle's card is a centred composition: the title, then the countdown or the seal. The seal is
+   a red rubber stamp holding a crack in the world shut; the crack breathes slowly behind it
+   (motion hook: .reveal-seal::before, rift-pulse). */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .puzzle:has(> .reveal:not(.is-revealed)) {
+  padding-block: 26px 28px;
+  box-shadow:
+    inset 0 -50px 70px -50px rgba(var(--light-rgb), 0.16),
+    0 28px 60px -30px rgba(0, 0, 0, 0.95),
+    0 0 70px -30px rgba(var(--wake-rgb), 0.6);
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .puzzle:has(> .reveal:not(.is-revealed))::after {
+  background: rgba(var(--light-rgb), 0.26);
+  -webkit-mask-size: 170px 170px, 130px 130px;
+  mask-size: 170px 170px, 130px 130px;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .puzzle:has(> .reveal:not(.is-revealed)) .riddle-head {
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .reveal-lock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .countdown-when {
+  max-width: 32ch;
+  text-wrap: balance;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .reveal-lock:not(.reveal-seal) .countdown-when {
+  margin-top: 16px;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .reveal-lock:not(.reveal-seal) {
+  position: relative;
+  isolation: isolate;
+  padding-top: 26px;
+}
+
+/* The clock glows from the rift behind it, breathing like the seal (motion hook). */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .reveal-lock:not(.reveal-seal)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 110px;
+  background: radial-gradient(45% 50% at 50% 50%, rgba(var(--light-rgb), 0.2), rgba(var(--wake-deep-rgb), 0.08) 60%, transparent 78%);
+  animation: rift-pulse var(--pulse-duration) ease-in-out infinite;
+  pointer-events: none;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal {
+  position: relative;
+  isolation: isolate;
+  padding: 34px 0 4px;
+}
+
+/* The crack, a mask in the room's light, and its glow. */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::before,
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -14px;
+  right: -14px;
+  height: 136px;
+  pointer-events: none;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::before {
+  z-index: -1;
+  background: rgba(var(--light-rgb), 0.95);
+  -webkit-mask: var(--tex-rift) center / 100% 100% no-repeat;
+  mask: var(--tex-rift) center / 100% 100% no-repeat;
+  animation: rift-pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::after {
+  z-index: -2;
+  background: radial-gradient(48% 42% at 50% 50%, rgba(var(--light-rgb), 0.3), rgba(var(--wake-deep-rgb), 0.12) 55%, transparent 75%);
+  animation: rift-pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+@keyframes rift-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* The stamp: typed capitals in rift-red ink, a double frame, pressed a little crooked, the ink
+   worn where the rubber missed. Backed by the panel so the crack passes behind it. */
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .countdown.is-sealed {
+  position: relative;
+  display: inline-block;
+  padding: 0.24em 0.5em 0.16em 0.62em;
+  font-family: var(--type);
+  font-weight: 400;
+  font-variation-settings: normal;
+  font-size: clamp(1.7rem, 8.2vw, 2.5rem);
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--light);
+  text-shadow: none;
+  background: rgba(10, 12, 21, 0.94);
+  border: 0.085em solid currentColor;
+  border-radius: 0.14em;
+  transform: rotate(-4deg);
+  -webkit-mask: var(--tex-wear) 0 0 / 170px 170px repeat;
+  mask: var(--tex-wear) 0 0 / 170px 170px repeat;
+  animation: none;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .countdown.is-sealed::after {
+  content: "";
+  position: absolute;
+  inset: 0.12em;
+  border: 0.035em solid currentColor;
+  border-radius: 0.07em;
+  pointer-events: none;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal .countdown-when {
+  margin-top: 26px;
+}
+
+body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal .seal-row {
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* Wider screens: the "when" line keeps its date on one line. */
+@media (min-width: 560px) {
+  body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal:not(.is-revealed) .countdown-when {
+    max-width: 40ch;
+  }
+}
+
+/* Desktop: the gate grows with the card. The crack keeps its proportions (the mask meets the box),
+   so a taller box draws it wider; its centre line stays where the stamp sits. */
+@media (min-width: 1024px) {
+  body:not([data-theme="tarot"]):not([data-theme="ombre"]) .puzzle:has(> .reveal:not(.is-revealed)) {
+    padding-block: 56px 52px;
+  }
+
+  body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::before,
+  body:not([data-theme="tarot"]):not([data-theme="ombre"]) .reveal-seal::after {
+    top: -32px;
+    height: 200px;
+  }
+
+  body:not([data-theme="tarot"]):not([data-theme="ombre"]) .countdown.is-sealed {
+    font-size: 3rem;
+  }
 }
 
 /* A file to keep, under the video: one button, then a link that saves it again. */
@@ -2005,21 +2770,23 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
 }
 
 .download-save {
-  border-color: rgba(var(--light-rgb), 0.5);
+  border-color: rgba(var(--light-rgb), 0.55);
 }
 
 .download-name {
   margin-top: 8px;
-  font-size: 0.8125rem;
+  font-family: var(--type);
+  font-size: 0.875rem;
   letter-spacing: 0.02em;
   color: var(--muted);
   overflow-wrap: anywhere;
 }
 
-/* Video: the audio player's twin. A veil and a big orb rest on the still picture, the orb and wake below. */
+/* ---------- Video: a screen in the dark, a big lamp on the still picture, the wire below ---------- */
+
 .video-player {
   --pulse: 2.8s;
-  --ripple: 3.2s; /* a slower sonar ping while the picture waits for its first play */
+  --ripple: 3.2s; /* a slower ping while the picture waits for its first play */
   position: relative;
 }
 
@@ -2032,20 +2799,21 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   width: min(100%, calc(70vh * var(--ratio)));
   width: min(100%, calc(70svh * var(--ratio)));
   margin-inline: auto;
-  border: 1px solid var(--panel-edge);
+  border: 1px solid rgba(var(--light-rgb), 0.28);
   border-radius: var(--radius-control);
   background: var(--abyss);
   box-shadow:
-    0 18px 40px -22px rgba(var(--wake-rgb), 0.7),
-    0 24px 48px -24px rgba(0, 0, 0, 0.8);
+    0 0 0 4px rgba(6, 7, 13, 0.75),
+    0 0 0 5px rgba(var(--ash-rgb), 0.08),
+    0 0 44px -12px rgba(var(--wake-rgb), 0.6),
+    0 24px 48px -24px rgba(0, 0, 0, 0.9);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
   transition:
-    opacity 1.2s var(--ease-out),
-    filter 1.2s var(--ease-out),
-    transform 1.2s var(--ease-out);
+    opacity 0.8s var(--ease-out),
+    transform 0.8s var(--ease-out);
 }
 
 .riddle-video {
@@ -2056,20 +2824,19 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   background: #000;
 }
 
-/* The video rises out of the dark the moment it is ready. */
+/* The video crosses over the moment it is ready (motion hook: .reveal.is-revealed). */
 .reveal:not(.is-revealed) .video-frame {
   opacity: 0;
-  filter: blur(10px) brightness(0.5);
-  transform: translateY(12px) scale(0.98);
+  transform: translateY(10px);
 }
 
-/* While the picture is still, the abyss dims it; it dissolves as the clip plays. */
+/* While the picture is still, the void dims it; it dissolves as the clip plays. */
 .video-veil {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, rgba(var(--deep-rgb), 0.28), transparent 55%),
-    radial-gradient(closest-side, rgba(3, 6, 11, 0.3), rgba(3, 6, 11, 0.72));
+    linear-gradient(to top, rgba(var(--deep-rgb), 0.35), transparent 55%),
+    radial-gradient(closest-side, rgba(6, 7, 13, 0.3), rgba(6, 7, 13, 0.75));
   pointer-events: none;
   transition: opacity 0.4s var(--ease-out);
 }
@@ -2091,8 +2858,7 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   --orb: 72px;
   transition:
     opacity 0.4s var(--ease-out),
-    transform 0.4s var(--ease-out),
-    filter 0.4s var(--ease-out);
+    transform 0.4s var(--ease-out);
 }
 
 .video-big {
@@ -2104,11 +2870,10 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   height: 30px;
 }
 
-/* Playing: the orb sinks into the picture (unless it is searching for data). */
+/* Playing: the lamp sinks into the picture (unless it is searching for data). */
 .video-player.is-sounding:not(.is-loading) .video-big-orb {
   opacity: 0;
   transform: scale(0.6);
-  filter: blur(6px);
   transition-duration: 0.3s;
 }
 
@@ -2122,8 +2887,8 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   grid-auto-columns: auto;
   grid-auto-flow: column;
   align-items: center;
-  column-gap: 12px;
-  margin-top: 14px;
+  column-gap: 14px;
+  margin-top: 16px;
   transition:
     opacity 0.2s var(--ease-out),
     transform 0.2s var(--ease-out);
@@ -2161,14 +2926,15 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   height: 44px;
   padding: 0;
   color: var(--text);
-  background: transparent;
+  background: rgba(6, 7, 13, 0.45);
   border-color: var(--field-edge);
   box-shadow: none;
+  text-shadow: none;
 }
 
 .video-fullscreen:hover {
-  border-color: rgba(var(--light-rgb), 0.6);
-  box-shadow: 0 0 20px -6px rgba(var(--light-rgb), 0.5);
+  border-color: rgba(var(--light-rgb), 0.75);
+  box-shadow: 0 0 20px -6px rgba(var(--light-rgb), 0.55);
 }
 
 .video-fullscreen .media-icon {
@@ -2227,7 +2993,7 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   padding:
     48px max(20px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
     max(20px, env(safe-area-inset-left));
-  background: linear-gradient(to top, rgba(3, 6, 11, 0.88), rgba(3, 6, 11, 0.5) 55%, transparent);
+  background: linear-gradient(to top, rgba(6, 7, 13, 0.9), rgba(6, 7, 13, 0.5) 55%, transparent);
 }
 
 /* Playing and untouched for a moment: the controls step aside and the cursor hides. */
@@ -2266,17 +3032,20 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 16px;
   text-align: center;
-  background: var(--abyss);
+  background:
+    radial-gradient(70% 60% at 50% 50%, rgba(var(--deep-rgb), 0.5), transparent 75%),
+    var(--abyss);
   cursor: default;
 }
 
 .video-guard-title {
   margin: 0;
-  font: 600 1rem/1.3 var(--display);
-  letter-spacing: 0.04em;
+  font: 650 1.0625rem/1.3 var(--display);
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  letter-spacing: 0.01em;
   color: var(--text);
 }
 
@@ -2293,94 +3062,70 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   visibility: hidden;
 }
 
-/* A riddle page shows its riddle at once: the panel surfaces gently, already readable. */
+/* ---------- Entrances and state hooks: simple fades; motion.css builds the flicker, the route
+   glitch, the lights and the save on these same hooks. ---------- */
+
+/* Login: the panel and any notice settle in after the sign (motion hook). */
+.js #register-section,
+.js .notice {
+  animation: fade-rise 0.8s var(--ease-out) 0.25s both;
+}
+
+.js .user-bar {
+  animation: fade-in 0.6s var(--ease-out) both;
+}
+
+/* A new view's frame fades in (motion hook: .view gets the VHS glitch). */
+.js .progress,
+.js .route-notice,
+.js .riddle-nav {
+  animation: fade-in 0.5s var(--ease-out) both;
+}
+
+/* A riddle page shows its riddle at once; .lit is set on the next frame (motion hook). */
 .js .puzzle {
-  animation: surface 0.6s var(--ease-out) backwards;
-  transition:
-    border-color 0.8s var(--ease-out),
-    box-shadow 0.8s var(--ease-out);
+  animation: fade-in 0.45s var(--ease-out) backwards;
 }
 
-@keyframes surface {
-  from {
-    opacity: 0.6;
-    transform: translateY(8px);
-  }
-}
-
+/* The hairline of the panel opens across the top once the page is lit. */
 .js .puzzle::before {
   transform: scaleX(0);
-  transition: transform 1.4s var(--ease-out) 150ms;
+  transition: transform 1.2s var(--ease-out) 120ms;
 }
 
 .js .puzzle.lit::before {
   transform: scaleX(1);
 }
 
-/* Inside an igniting card the player wakes after the text: the orb lights, then its wake draws itself. */
-.js .puzzle .audio-orb {
-  transition:
-    opacity 0.9s var(--ease-out),
-    transform 0.9s var(--ease-out),
-    filter 0.9s var(--ease-out);
-  transition-delay: 150ms;
-}
-
-.js .puzzle .audio-seek {
-  clip-path: inset(-20px -20px -20px -20px);
-  transition: clip-path 1.4s var(--ease-out);
-  transition-delay: 300ms;
-}
-
-.js .puzzle .audio-time {
-  transition: opacity 0.9s var(--ease-out);
-  transition-delay: 600ms;
-}
-
-.js .puzzle:not(.lit) .audio-orb {
-  opacity: 0;
-  transform: scale(0.6);
-  filter: blur(6px);
-}
-
-.js .puzzle:not(.lit) .audio-seek {
-  clip-path: inset(-20px 100% -20px -20px);
-}
-
-.js .puzzle:not(.lit) .audio-time,
-.js .puzzle:not(.lit) .audio-glint {
+/* Index tiles appear on the first visit only, as they scroll into view (.ignite, then .lit;
+   motion hook: the flicker-on). An animation, so hover transitions keep no delay. */
+.js .tile.ignite:not(.lit) {
   opacity: 0;
 }
 
-/* The video wakes the same way once its picture has surfaced: the orbs light, the wake draws itself, the times appear. */
-.js .reveal.is-revealed .video-orb,
-.js .reveal.is-revealed .video-bar-orb {
-  animation: orb-light 0.9s var(--ease-out) 450ms backwards;
+.js .tile.ignite.lit {
+  animation: fade-rise 0.6s var(--ease-out) calc(var(--i, 0) * 90ms) backwards;
 }
 
-.js .reveal.is-revealed .video-seek {
-  animation: seek-draw 1.4s var(--ease-out) 650ms backwards;
+/* Answer saved: the panel's rim glows and settles; back on the index, the tile of the clue just
+   collected does the same (motion hook: .puzzle.saved, .tile.saved). */
+.puzzle.saved,
+.tile.saved {
+  animation: saved-glow 1.4s var(--ease-out);
 }
 
-.js .reveal.is-revealed .video-time,
-.js .reveal.is-revealed .video-fullscreen {
-  animation: fade-in 0.9s var(--ease-out) 1000ms backwards;
+.js .tile.ignite.lit.saved {
+  animation:
+    fade-rise 0.6s var(--ease-out) calc(var(--i, 0) * 90ms) backwards,
+    saved-glow 1.4s var(--ease-out) calc(var(--i, 0) * 90ms + 300ms);
 }
 
-@keyframes orb-light {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-    filter: blur(6px);
-  }
-}
-
-@keyframes seek-draw {
-  from {
-    clip-path: inset(-20px 100% -20px -20px);
-  }
-  to {
-    clip-path: inset(-20px -20px -20px -20px);
+@keyframes saved-glow {
+  0% {
+    border-color: rgba(var(--light-rgb), 0.9);
+    box-shadow:
+      0 0 0 1px rgba(var(--light-rgb), 0.45),
+      0 0 48px -6px rgba(var(--light-rgb), 0.55);
   }
 }
 
@@ -2390,152 +3135,17 @@ html:has(.reveal-loader:not([hidden]), .video-player) body {
   }
 }
 
-/* Index tiles ignite on the first visit only (an animation, so hover transitions keep no delay). */
-.js .tile.ignite:not(.lit) {
-  opacity: 0.25;
-  filter: blur(4px) brightness(0.6);
-  transform: translateY(18px);
-}
-
-.js .tile.ignite.lit {
-  animation: tile-ignite 1.2s var(--ease-out) calc(var(--i, 0) * 120ms) backwards;
-}
-
-@keyframes tile-ignite {
-  from {
-    opacity: 0.25;
-    filter: blur(4px) brightness(0.6);
-    transform: translateY(18px);
-  }
-}
-
-/* Answer saved: the panel flares, then settles back into the dark;
-   back on the index, the tile of the clue just collected flares once too. */
-.puzzle.saved,
-.tile.saved {
-  animation: flare 1.6s var(--ease-out);
-}
-
-.js .tile.ignite.lit.saved {
-  animation:
-    tile-ignite 1.2s var(--ease-out) calc(var(--i, 0) * 120ms) backwards,
-    flare 1.6s var(--ease-out) calc(var(--i, 0) * 120ms + 400ms);
-}
-
-@keyframes flare {
-  0% {
-    border-color: rgba(var(--light-rgb), 0.9);
-    box-shadow:
-      0 0 0 1px rgba(var(--light-rgb), 0.5),
-      0 0 48px -6px rgba(var(--light-rgb), 0.6);
-  }
-  100% {
-    border-color: var(--panel-edge);
-    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.8);
-  }
-}
-
-/* ---------- Notices & misc ---------- */
-
-.notice {
-  margin: 0 0 16px;
-  padding: 14px 16px;
-  border-radius: var(--radius-control);
-  border: 1px solid currentColor;
-  background: rgba(40, 10, 12, 0.6);
-}
-
-.notice-error {
-  color: var(--error);
-}
-
-code {
-  font-family: ui-monospace, Consolas, monospace;
-  color: var(--text);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-/* ---------- Entrance: the title is written in light ---------- */
-
-.js .title-line {
-  animation: ignite 1.8s var(--ease-out) both;
-  animation-delay: calc(200ms + var(--i) * 220ms);
-}
-
-.js .wake-path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: draw-wake 1.6s var(--ease-out) 900ms forwards;
-}
-
-.js .wake-head {
-  opacity: 0;
-  animation: appear 0.6s var(--ease-out) 2.2s forwards;
-}
-
-.js #register-section,
-.js .notice {
-  animation: rise 1.2s var(--ease-out) 1.3s both;
-}
-
-.js .is-playing .title-line {
-  animation: ignite-compact 1.2s var(--ease-out) both;
-  animation-delay: calc(var(--i) * 90ms);
-}
-
-.js .user-bar {
-  animation: rise 1s var(--ease-out) 0.3s both;
-}
-
-/* Changing view: the new page's frame rises out of the water, its panels then ignite. */
-.js .progress,
-.js .route-notice,
-.js .riddle-nav {
-  animation: rise 0.9s var(--ease-out) both;
-}
-
-@keyframes ignite {
+@keyframes fade-rise {
   from {
     opacity: 0;
-    filter: blur(14px);
-    text-shadow: none;
+    transform: translateY(12px);
   }
 }
 
-/* Same light, separate name so the animation replays when the view changes. */
-@keyframes ignite-compact {
-  from {
-    opacity: 0;
-    filter: blur(10px);
-    text-shadow: none;
-  }
-}
-
-@keyframes draw-wake {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes appear {
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
+/* Lightning (upside.js sets data-storm on <html> for ~200 ms): the glass rims catch it. */
+:root[data-storm="1"] body:not([data-theme]) .card {
+  border-color: rgba(var(--light-rgb), 0.42);
+  transition-duration: 0.08s;
 }
 
 /* ---------- Tarot deck: the riddle-4 page ("theme": "tarot") ---------- */
@@ -2610,7 +3220,7 @@ body[data-theme="tarot"] .puzzle::after {
   pointer-events: none;
 }
 
-/* Title in the card's cartouche: spaced capitals over a gold rule with a diamond. */
+/* Title in the card's cartouche: classical spaced capitals over a gold rule with a diamond. */
 body[data-theme="tarot"] .riddle-head {
   margin-bottom: 24px;
   text-align: center;
@@ -2618,8 +3228,9 @@ body[data-theme="tarot"] .riddle-head {
 
 body[data-theme="tarot"] .riddle-title {
   padding-top: 6px;
-  font-weight: 300;
-  font-size: clamp(1.9rem, 9vw, 2.5rem);
+  font-weight: 400;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
+  font-size: clamp(1.8rem, 8.6vw, 2.4rem);
   letter-spacing: 0.16em;
   /* The tracking also follows the last letter: pulled back so the word stays centred. */
   margin-right: -0.16em;
@@ -2643,19 +3254,24 @@ body[data-theme="tarot"] .riddle-subtitle {
   margin-inline: auto;
 }
 
+body[data-theme="tarot"] .riddle-position,
+body[data-theme="tarot"] .countdown-when,
+body[data-theme="tarot"] .seal-checked {
+  font-style: italic;
+}
+
 body[data-theme="tarot"] .media-label {
   letter-spacing: 0.14em;
-  text-transform: uppercase;
   font-size: 0.75rem;
   color: var(--light);
 }
 
 body[data-theme="tarot"] .answer-form {
-  border-top-color: rgba(var(--light-rgb), 0.18);
+  border-top: 1px solid rgba(var(--light-rgb), 0.18);
 }
 
 body[data-theme="tarot"] input[type="text"]:focus {
-  background: rgba(20, 8, 15, 0.9);
+  background-color: rgba(20, 8, 15, 0.9);
 }
 
 body[data-theme="tarot"] button:not(.orb-button):not(.video-fullscreen):not(.btn-secondary) {
@@ -2667,14 +3283,18 @@ body[data-theme="tarot"] .btn-secondary {
   background: rgba(12, 6, 10, 0.45);
 }
 
-/* Media rails: a warm track instead of the blue water line. */
+/* Media rails: a warm track instead of the dark wire. */
 body[data-theme="tarot"] .wake-seek::-webkit-slider-runnable-track {
   background:
     var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
     rgba(var(--light-rgb), 0.2);
 }
 
-body[data-theme="tarot"] .wake-seek::-moz-range-track,
+/* Separate rules: a selector list with a -moz- pseudo-element is dropped whole elsewhere. */
+body[data-theme="tarot"] .wake-seek::-moz-range-track {
+  background: rgba(var(--light-rgb), 0.2);
+}
+
 body[data-theme="tarot"] .reveal-bar {
   background: rgba(var(--light-rgb), 0.2);
 }
@@ -2731,7 +3351,8 @@ body[data-theme="tarot"] .puzzle:has(> .reveal:not(.is-revealed)) .reveal-loader
 }
 
 body[data-theme="tarot"] .countdown.is-sealed {
-  font-weight: 300;
+  font-weight: 400;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
   font-size: clamp(1.4rem, 7vw, 1.9rem);
   letter-spacing: 0.32em;
   margin-right: -0.32em;
@@ -2751,6 +3372,7 @@ body[data-theme="tarot"] .countdown.is-sealed {
 body[data-theme="tarot"] .reveal-seal .countdown-when {
   max-width: 30ch;
   margin-top: 14px;
+  font-size: 1.0625rem;
   text-wrap: balance;
 }
 
@@ -2842,6 +3464,7 @@ body[data-theme="tarot"] .video-guard {
 
 body[data-theme="tarot"] .video-guard-title {
   font-weight: 400;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
   font-size: 0.9375rem;
   letter-spacing: 0.22em;
   margin-right: -0.22em;
@@ -2914,6 +3537,8 @@ body[data-theme="ombre"] .puzzle {
   --light-text: var(--ombre-ink);
   --placeholder: #5c4530;
   --error: #7a1a0c;
+  --success: var(--ombre-ember);
+  --success-rgb: 110, 40, 11;
   --field: rgba(255, 246, 228, 0.42);
   --field-edge: #4a3320;
   --light: var(--ombre-ember);
@@ -2924,6 +3549,7 @@ body[data-theme="ombre"] .puzzle {
   --wake-rgb: 23, 16, 10;
   --sheen-rgb: 240, 166, 64;
   --deep-rgb: 60, 35, 15;
+  --ash-rgb: 74, 51, 32;
   color: var(--ombre-ink);
   border-color: #2a1a0e;
   border-radius: 10px;
@@ -2939,8 +3565,10 @@ body[data-theme="ombre"] .puzzle {
     0 0 0 6px rgba(240, 166, 64, 0.1);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  /* Opacity only: the base entrance also moves the card, which would make it a stacking
-     context for a moment and lift its shadow plate (::before) above the paper. */
+  /* The card is no stacking context here: its shadow plate (::before) must sit behind it. */
+  isolation: auto;
+  /* Opacity only: a moving entrance would make the card a stacking context for a moment and
+     lift its shadow plate above the paper. */
   animation-name: ombre-surface;
 }
 
@@ -3004,8 +3632,9 @@ body[data-theme="ombre"] .riddle-title {
   display: table;
   margin-inline: auto;
   padding: 4px 0 30px;
-  font-weight: 700;
-  font-size: clamp(1.75rem, 8.5vw, 2.4rem);
+  font-weight: 800;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
+  font-size: clamp(1.7rem, 8.2vw, 2.3rem);
   line-height: 1.05;
   letter-spacing: 0.14em;
   /* The tracking also follows the last letter: the same space before the first keeps the
@@ -3032,6 +3661,10 @@ body[data-theme="ombre"] .riddle-title::after {
   right: 18%;
 }
 
+body[data-theme="ombre"] .riddle-position-current {
+  text-shadow: none;
+}
+
 body[data-theme="ombre"] .riddle-subtitle {
   margin-inline: auto;
   font-style: normal;
@@ -3040,24 +3673,24 @@ body[data-theme="ombre"] .riddle-subtitle {
 
 body[data-theme="ombre"] .media-label {
   letter-spacing: 0.14em;
-  text-transform: uppercase;
   font-size: 0.75rem;
   color: var(--ombre-ink-soft);
 }
 
 body[data-theme="ombre"] .answer-form {
-  border-top-color: rgba(74, 51, 32, 0.35);
+  border-top: 1px solid rgba(74, 51, 32, 0.35);
 }
 
 /* Ink outline on paper; the field lightens like a patch of thinner paper. */
 body[data-theme="ombre"] .puzzle input[type="text"] {
   color: var(--ombre-ink);
   caret-color: var(--ombre-ember);
+  box-shadow: none;
 }
 
 body[data-theme="ombre"] .puzzle input[type="text"]:focus {
   border-color: var(--ombre-ember);
-  background: rgba(255, 246, 228, 0.6);
+  background-color: rgba(255, 246, 228, 0.6);
   box-shadow: 0 0 0 3px rgba(110, 40, 11, 0.18);
 }
 
@@ -3071,6 +3704,7 @@ body[data-theme="ombre"] .puzzle button:not(.orb-button):not(.video-fullscreen):
   background: var(--ombre-ink);
   border-color: var(--ombre-ink);
   box-shadow: 0 12px 24px -14px rgba(10, 5, 2, 0.9);
+  text-shadow: none;
 }
 
 body[data-theme="ombre"] .puzzle button:not(.orb-button):not(.video-fullscreen):not(.btn-secondary):hover {
@@ -3092,7 +3726,7 @@ body[data-theme="ombre"] .puzzle .save-status.ok {
   text-shadow: none;
 }
 
-/* Media rails: an umber track on the paper instead of the blue water line. */
+/* Media rails: an umber track on the paper instead of the dark wire. */
 body[data-theme="ombre"] .wake-seek::-webkit-slider-runnable-track {
   background:
     var(--wake-fill) 0 0 / var(--progress) 100% no-repeat,
@@ -3100,7 +3734,10 @@ body[data-theme="ombre"] .wake-seek::-webkit-slider-runnable-track {
   box-shadow: none;
 }
 
-body[data-theme="ombre"] .wake-seek::-moz-range-track,
+body[data-theme="ombre"] .wake-seek::-moz-range-track {
+  background: rgba(74, 51, 32, 0.28);
+}
+
 body[data-theme="ombre"] .reveal-bar {
   background: rgba(74, 51, 32, 0.28);
 }
@@ -3127,8 +3764,9 @@ body[data-theme="ombre"] .reveal-seal {
 }
 
 body[data-theme="ombre"] .countdown.is-sealed {
-  font-weight: 700;
-  font-size: clamp(1.5rem, 7.5vw, 2rem);
+  font-weight: 800;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
+  font-size: clamp(1.45rem, 7.2vw, 1.95rem);
   letter-spacing: 0.3em;
   margin-right: -0.3em;
   text-transform: uppercase;
@@ -3179,6 +3817,17 @@ body[data-theme="ombre"] .video-player.is-fullscreen .video-frame {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+body[data-theme="ombre"] .puzzle .video-fullscreen {
+  background: rgba(255, 246, 228, 0.25);
+  border-color: var(--ombre-ink-soft);
+}
+
+/* The cover is the dark of the house, not the paper: its text goes back to cream. */
+body[data-theme="ombre"] .video-guard {
+  --text: #f3e6d2;
+  --muted: #cdb393;
 }
 
 body[data-theme="ombre"] .video-veil {
@@ -3345,11 +3994,15 @@ body[data-theme="ombre"]:has(.puzzle.saved) .ombre-wave svg {
 
 @media (min-width: 720px) {
   .site-header {
-    padding-top: 12vh;
+    padding-top: 10vh;
   }
 
   .card {
-    padding: 28px 28px 24px;
+    padding: 30px 30px 26px;
+  }
+
+  .letter-wall {
+    margin: -12px -12px 22px;
   }
 
   .tile {
@@ -3361,7 +4014,81 @@ body[data-theme="ombre"]:has(.puzzle.saved) .ombre-wave svg {
   }
 }
 
-/* ---------- Reduced motion: still sea, no entrances ---------- */
+/* Desktop: the sign stands beside the login panel; the index spreads its tiles in two
+   columns; a riddle keeps a comfortable reading column under a wide header. */
+@media (min-width: 1024px) {
+  :root {
+    --column: 960px;
+  }
+
+  body:not(.is-playing) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
+    align-items: center;
+    column-gap: clamp(48px, 7vw, 120px);
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 48px 56px;
+  }
+
+  body:not(.is-playing) .site-header,
+  body:not(.is-playing) main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:not(.is-playing) .site-header {
+    align-self: center;
+    padding-bottom: 6vh;
+  }
+
+  body:not(.is-playing) .title {
+    font-size: clamp(5.75rem, 9.6vw, 9rem);
+  }
+
+  .index-view .tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  /* A riddle page narrows the whole column (header included) to the reading width. */
+  body:has(.riddle-view) {
+    --column: 752px;
+  }
+
+  .card {
+    padding: 34px 36px 30px;
+  }
+}
+
+/* ---------- Forced colours (Windows high contrast): a plain sign in system colours ---------- */
+
+/* The system paints a backplate behind each line: the reflection goes, the tubes become plain
+   letters, and the small "al" sits above the backplate of "Tesoro" that overlaps it. */
+@media (forced-colors: active) {
+  .title-mirror {
+    display: none;
+  }
+
+  .title-neon {
+    filter: none;
+  }
+
+  .title-neon .title-line {
+    -webkit-text-stroke: 0;
+    color: CanvasText;
+  }
+
+  .title-neon .title-al {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* ---------- Reduced motion: every final state at once, nothing drifts, flickers or pulses ---------- */
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -3372,41 +4099,32 @@ body[data-theme="ombre"]:has(.puzzle.saved) .ombre-wave svg {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 
   .js .tile.ignite:not(.lit) {
     opacity: 1;
-    filter: none;
+  }
+
+  .js .puzzle::before {
     transform: none;
   }
 
-  .js .puzzle:not(.lit) .audio-orb,
-  .js .puzzle:not(.lit) .audio-time {
+  /* The rift holds still, fully visible; the membrane on locked tiles too. */
+  .tile.is-locked::before,
+  .reveal-lock::before,
+  .reveal-seal::after {
+    animation: none !important;
     opacity: 1;
-    filter: none;
-    transform: none;
   }
 
-  .js .puzzle:not(.lit) .audio-seek {
-    clip-path: none;
-  }
-
-  /* The video player shows everything at once; its states still change, without travel. */
-  .js .reveal.is-revealed .video-orb,
-  .js .reveal.is-revealed .video-bar-orb,
-  .js .reveal.is-revealed .video-seek,
-  .js .reveal.is-revealed .video-time,
-  .js .reveal.is-revealed .video-fullscreen {
-    animation: none;
-  }
-
+  .reveal:not(.is-revealed) .video-frame,
   .video-player.is-sounding:not(.is-loading) .video-big-orb,
   .video-player.is-idle .video-controls {
     transform: none;
-    filter: none;
   }
 
-  /* Loader: no travelling glint; the lit wake breathes slowly instead. */
+  /* Loader: no travelling pulse; the lit wire breathes slowly instead. */
   .loader .loader-haze,
   .loader .loader-glint,
   .loader .loader-head,
