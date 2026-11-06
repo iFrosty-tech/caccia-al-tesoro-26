@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow, noimageindex">
   <meta name="googlebot" content="noindex, nofollow, noimageindex">
   <meta name="referrer" content="no-referrer">
-  <meta name="theme-color" content="#03060b">
+  <meta name="theme-color" content="#06070d">
   <meta name="color-scheme" content="dark">
   <title>Caccia al Tesoro</title>
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
@@ -15,20 +15,24 @@
   <script>document.documentElement.classList.add("js");</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Josefin+Sans:wght@300&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,72,400..900,0..100,0..1;1,72,400..600,100,1&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&display=swap">
   <link rel="stylesheet" href="tavola.css">
 </head>
 <body>
   <!-- Hidden page: reached only through a clue, never linked from the site. -->
   <canvas id="sea" class="sea" aria-hidden="true"></canvas>
+  <div class="ambience" aria-hidden="true"></div>
 
   <main class="stage">
     <canvas id="board" class="board" role="img" aria-label="Tavola periodica" hidden></canvas>
   </main>
 
   <section id="notice" class="notice" aria-live="polite">
+    <!-- Decorative: the one bulb still lit over the panel (it falters when something goes wrong). -->
+    <span class="notice-lamp" aria-hidden="true"></span>
     <p id="notice-title" class="notice-title">La tavola affiora…</p>
-    <div id="notice-bar" class="notice-bar" aria-hidden="true"></div>
+    <!-- While the table surfaces, a light runs along a string of bulbs. -->
+    <div id="notice-bar" class="notice-bar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <p id="notice-text" class="notice-text" hidden></p>
     <a id="notice-login" class="notice-action" href="../" hidden>Accedi alla caccia</a>
     <button id="notice-retry" class="notice-action" type="button" hidden>Riprova</button>
@@ -39,7 +43,7 @@
   </noscript>
 
   <script src="../config.js"></script>
-  <script src="../plankton.js"></script>
+  <script src="../upside.js"></script>
   <script src="tavola.js"></script>
 </body>
 </html>
