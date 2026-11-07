@@ -1,2 +1,6 @@
 .clasp.json
 .clasprc.json
+
+# Preview tools (tools/preview): screenshots and a local Playwright install
+/.preview/
+node_modules/
