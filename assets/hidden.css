@@ -1,0 +1,476 @@
+/* Shared shell of the hidden pages (/arancione/, /c/): the Sottosopra of the main site, with
+   the notice panel and its bulb. These pages do not load style.css, so the tokens they need are
+   mirrored here (same values as style.css and periodica/tavola.css). Behind the page upside.js
+   draws the ash and the storm on #sea; .ambience adds grain, scanlines and a vignette. Each page
+   adds its own stylesheet for what it shows; --lamp-rgb recolours the notice's bulb. */
+
+:root {
+  --abyss: #06070d;
+  --deep-rgb: 92, 14, 24; /* the storm's red underbelly */
+  --storm-rgb: 58, 74, 99; /* lightning-lit cloud */
+  --panel: rgba(12, 15, 26, 0.74);
+  --panel-edge: rgba(255, 59, 48, 0.2); /* the red hairline of every panel */
+  --wake: #a3121a; /* white text 7.9:1 */
+  --wake-rgb: 227, 38, 46;
+  --light: #ff4a3d; /* the rift glow: focus, marks (5.8:1 on the panel) */
+  --light-rgb: 255, 74, 61;
+  --sheen-rgb: 255, 196, 184;
+  --text: #ece6dd; /* warm paper white, 15.6:1 on the panel */
+  --muted: #a7adbb; /* 8.6:1 */
+  --ash-rgb: 184, 196, 214;
+  /* String-light bulbs: only for lights, never for text. */
+  --bulb-red-rgb: 255, 59, 48;
+  --bulb-amber-rgb: 255, 182, 39;
+  --bulb-green-rgb: 57, 217, 138;
+  --bulb-blue-rgb: 61, 139, 255;
+  --bulb-pink-rgb: 255, 95, 162;
+  --lamp-rgb: var(--bulb-red-rgb); /* the notice's bulb; a page may give it its own colour */
+  --radius: 14px;
+  --radius-control: 10px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --pulse-duration: 5.2s;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Drawn once in style.css, mirrored: grain, and vines as masks that take any colour. */
+  --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .72 0 0 0 0 .77 0 0 0 0 .84 1.3 0 0 0 -.56'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --tex-vines: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath stroke-width='2.2' d='M160 5C142 9 130 3 116 11S94 29 78 27 56 37 44 35'/%3E%3Cpath stroke-width='1.5' d='M116 11C111 25 117 35 109 47S111 65 103 77'/%3E%3Cpath stroke-width='1' d='M94 25C88 37 74 39 67 51M109 47C99 49 93 57 85 57M103 77C97 83 98 92 91 97'/%3E%3Cpath stroke-width='2' d='M155 0C151 22 157 40 147 58S151 90 139 108 141 130 133 146'/%3E%3Cpath stroke-width='1' d='M147 58C135 62 129 74 119 76M142 100C151 108 153 118 159 122M137 124C127 128 124 138 116 140'/%3E%3Cg stroke='none' fill='%23000'%3E%3Ccircle cx='44' cy='35' r='1.7'/%3E%3Ccircle cx='67' cy='51' r='1.3'/%3E%3Ccircle cx='133' cy='146' r='1.5'/%3E%3Ccircle cx='91' cy='97' r='1.2'/%3E%3Ccircle cx='116' cy='140' r='1.1'/%3E%3C/g%3E%3C/svg%3E");
+  --tex-vines-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cg transform='rotate(180 80 80)'%3E%3Cpath stroke-width='2.2' d='M160 5C142 9 130 3 116 11S94 29 78 27 56 37 44 35'/%3E%3Cpath stroke-width='1.5' d='M116 11C111 25 117 35 109 47S111 65 103 77'/%3E%3Cpath stroke-width='1' d='M94 25C88 37 74 39 67 51M109 47C99 49 93 57 85 57'/%3E%3Cpath stroke-width='2' d='M155 0C151 22 157 40 147 58S151 90 139 108'/%3E%3Cpath stroke-width='1' d='M147 58C135 62 129 74 119 76'/%3E%3Cg stroke='none' fill='%23000'%3E%3Ccircle cx='44' cy='35' r='1.7'/%3E%3Ccircle cx='67' cy='51' r='1.3'/%3E%3Ccircle cx='139' cy='108' r='1.4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  color-scheme: dark;
+  accent-color: var(--light);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  font: 400 1rem/1.6 var(--body);
+  font-synthesis: none;
+  background-color: var(--abyss);
+  /* Under the ash canvas (and in its place if it never starts): the storm's red glow overhead,
+     a cold lightning-lit cloud low on one side. */
+  background-image:
+    radial-gradient(140% 55% at 50% -14%, rgba(var(--deep-rgb), 0.6), transparent 70%),
+    radial-gradient(90% 45% at 88% 112%, rgba(var(--storm-rgb), 0.3), transparent 70%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sea {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Film grain, faint scanlines and a vignette between the ash and the page (static). */
+.ambience {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px),
+    radial-gradient(135% 100% at 50% 42%, transparent 52%, rgba(2, 2, 6, 0.72) 100%);
+}
+
+.ambience::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--tex-grain) 0 0 / 180px 180px repeat;
+  opacity: 0.22;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- Notice: dark glass with a red hairline, a bulb hanging over it ---------- */
+
+.notice {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  isolation: isolate;
+  width: min(22rem, calc(100% - 32px));
+  margin: 0;
+  padding: 56px 22px 24px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 28px 60px -30px rgba(0, 0, 0, 0.95),
+    0 0 60px -34px rgba(var(--wake-rgb), 0.55);
+  transform: translate(-50%, -50%);
+  animation: notice-in 0.45s var(--ease-out) backwards;
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The rift's hairline of light along the top edge. */
+.notice::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.7), transparent);
+  pointer-events: none;
+}
+
+/* Vines creeping in from two corners, under the content. */
+.notice::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(var(--light-rgb), 0.2);
+  -webkit-mask:
+    var(--tex-vines) top right / 132px 132px no-repeat,
+    var(--tex-vines-bl) bottom left / 96px 96px no-repeat;
+  mask:
+    var(--tex-vines) top right / 132px 132px no-repeat,
+    var(--tex-vines-bl) bottom left / 96px 96px no-repeat;
+  pointer-events: none;
+}
+
+html:not(.js) #notice {
+  display: none;
+}
+
+.notice-static {
+  position: static;
+  padding-top: 24px;
+  transform: none;
+}
+
+/* The site's mark, live: one red bulb hanging from the panel's top edge on a short cord
+   (the element), its socket (::before) and glass (::after). It breathes like the rift. */
+.notice-lamp {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 18px;
+  height: 41px;
+  margin-left: -9px;
+  background: linear-gradient(#3a4152, #3a4152) 50% 0 / 1.5px 12px no-repeat;
+  pointer-events: none;
+}
+
+.notice-lamp::before {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  width: 10px;
+  height: 8px;
+  margin-left: -5px;
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(90deg, #171a24, #4a5164 45%, #171a24);
+  box-shadow: 0 2px 3px -1px rgba(var(--lamp-rgb), 0.6);
+}
+
+.notice-lamp::after {
+  content: "";
+  position: absolute;
+  top: 17.5px;
+  left: 0;
+  width: 18px;
+  height: 23.5px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background: radial-gradient(circle at 50% 40%, #ffffff 0 12%, rgba(var(--lamp-rgb), 1) 52%, rgba(var(--lamp-rgb), 0.9));
+  box-shadow:
+    0 0 7px 1px rgba(var(--lamp-rgb), 0.95),
+    0 0 26px 8px rgba(var(--lamp-rgb), 0.38);
+  animation:
+    lamp-on 0.76s ease-out backwards,
+    lamp-breathe var(--pulse-duration) ease-in-out 0.76s infinite;
+}
+
+/* Flicker: a bulb warming up (0, 1, 0.2, 1, 0.6, 1). */
+@keyframes lamp-on {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  34% {
+    opacity: 0.2;
+  }
+  56% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 0.6;
+  }
+}
+
+/* Pulse: the rift breathing. */
+@keyframes lamp-breathe {
+  50% {
+    box-shadow:
+      0 0 9px 2px rgba(var(--lamp-rgb), 1),
+      0 0 38px 12px rgba(var(--lamp-rgb), 0.5);
+  }
+}
+
+/* Something went wrong: the bulb falters now and then (two dips, then holds). */
+.notice:has(#notice-retry:not([hidden])) .notice-lamp::after {
+  animation:
+    lamp-on 0.76s ease-out backwards,
+    lamp-falter 4.8s linear 0.76s infinite;
+}
+
+@keyframes lamp-falter {
+  0%,
+  78%,
+  100% {
+    opacity: 1;
+  }
+  81% {
+    opacity: 0.25;
+  }
+  84% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.35;
+  }
+  92% {
+    opacity: 1;
+  }
+}
+
+.notice-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 650;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: 1.625rem;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+  text-shadow: 0 0 24px rgba(var(--light-rgb), 0.28);
+}
+
+.notice.is-busy .notice-title {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    text-shadow:
+      0 0 2px rgba(var(--light-rgb), 0.5),
+      0 0 18px rgba(var(--light-rgb), 0.6);
+  }
+}
+
+.notice-text {
+  margin: 10px 0 0;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* Unknown duration: a light runs along a string of bulbs, in the site's bulb colours. */
+.notice-bar {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  max-width: 15rem;
+  height: 22px;
+  margin: 20px auto 0;
+  padding: 0 4px;
+}
+
+/* The wire. */
+.notice-bar::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #3a4152 8%, #2a303e 50%, #3a4152 92%, transparent);
+}
+
+/* Each bulb: a socket (::before) and its glass (::after), as on the site's progress wire. */
+.notice-bar > i {
+  --bulb-rgb: var(--bulb-red-rgb);
+  --i: 0;
+  position: relative;
+  width: 12px;
+  height: 18px;
+}
+
+.notice-bar > i::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 56%;
+  height: 28%;
+  transform: translateX(-50%);
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(90deg, #171a24, #4a5164 45%, #171a24);
+}
+
+.notice-bar > i::after {
+  content: "";
+  position: absolute;
+  top: 24%;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 1px solid rgba(var(--bulb-rgb), 0.42);
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.28), transparent 34%),
+    radial-gradient(circle at 50% 65%, rgba(var(--bulb-rgb), 0.24), rgba(var(--bulb-rgb), 0.08));
+  animation: chase 1.4s linear calc(var(--i) * 0.2s) infinite;
+}
+
+/* The string's colours repeat every five bulbs, in the same order as on the site. */
+.notice-bar > i:nth-child(5n + 2) {
+  --bulb-rgb: var(--bulb-amber-rgb);
+}
+
+.notice-bar > i:nth-child(5n + 3) {
+  --bulb-rgb: var(--bulb-green-rgb);
+}
+
+.notice-bar > i:nth-child(5n + 4) {
+  --bulb-rgb: var(--bulb-blue-rgb);
+}
+
+.notice-bar > i:nth-child(5n) {
+  --bulb-rgb: var(--bulb-pink-rgb);
+}
+
+.notice-bar > i:nth-child(2) { --i: 1; }
+.notice-bar > i:nth-child(3) { --i: 2; }
+.notice-bar > i:nth-child(4) { --i: 3; }
+.notice-bar > i:nth-child(5) { --i: 4; }
+.notice-bar > i:nth-child(6) { --i: 5; }
+.notice-bar > i:nth-child(7) { --i: 6; }
+
+/* Each bulb snaps on as the light reaches it and fades behind it: under one flash a second. */
+@keyframes chase {
+  0%,
+  14% {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: radial-gradient(circle at 50% 42%, #ffffff 0 12%, rgba(var(--bulb-rgb), 1) 52%, rgba(var(--bulb-rgb), 0.9));
+    box-shadow:
+      0 0 6px 1px rgba(var(--bulb-rgb), 0.95),
+      0 0 18px 5px rgba(var(--bulb-rgb), 0.42);
+  }
+  40%,
+  100% {
+    border-color: rgba(var(--bulb-rgb), 0.42);
+    background:
+      radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.28), transparent 34%),
+      radial-gradient(circle at 50% 65%, rgba(var(--bulb-rgb), 0.24), rgba(var(--bulb-rgb), 0.08));
+    box-shadow:
+      0 0 6px 1px rgba(var(--bulb-rgb), 0),
+      0 0 18px 5px rgba(var(--bulb-rgb), 0);
+  }
+}
+
+/* Primary: a pane of deep rift red, lit from inside (as the site's buttons). */
+.notice-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  margin-top: 22px;
+  padding: 12px 24px;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  text-decoration: none;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%),
+    var(--wake);
+  border: 1px solid rgba(var(--light-rgb), 0.55);
+  border-radius: var(--radius-control);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--sheen-rgb), 0.22),
+    inset 0 -10px 18px -10px rgba(0, 0, 0, 0.45),
+    0 10px 26px -12px rgba(var(--wake-rgb), 0.95),
+    0 0 18px -8px rgba(var(--light-rgb), 0.7);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    transform 0.2s var(--ease-out),
+    box-shadow 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
+}
+
+.notice-action:hover {
+  border-color: rgba(var(--light-rgb), 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--sheen-rgb), 0.3),
+    inset 0 -10px 18px -10px rgba(0, 0, 0, 0.35),
+    0 12px 30px -10px rgba(var(--wake-rgb), 1),
+    0 0 26px -6px rgba(var(--light-rgb), 0.85);
+}
+
+.notice-action:active {
+  transform: scale(0.97);
+}
+
+.notice-action:focus-visible {
+  outline: 2px solid var(--light);
+  outline-offset: 3px;
+}
+
+/* Reduced motion: no flicker, chase or breathing; every final state shows at once. The string
+   stays softly lit, still reading as "working" beside its title. */
+@media (prefers-reduced-motion: reduce) {
+  .notice,
+  .notice-lamp::after,
+  .notice:has(#notice-retry:not([hidden])) .notice-lamp::after,
+  .notice.is-busy .notice-title,
+  .notice-bar > i::after {
+    animation: none;
+  }
+
+  .notice-bar > i::after {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: radial-gradient(circle at 50% 42%, #ffffff 0 10%, rgba(var(--bulb-rgb), 0.9) 52%, rgba(var(--bulb-rgb), 0.75));
+    box-shadow: 0 0 6px 1px rgba(var(--bulb-rgb), 0.6);
+  }
+
+  .notice-action {
+    transition: none;
+  }
+}

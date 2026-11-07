@@ -43,7 +43,7 @@
     "id": "p6",
     "title": "Enigma finale",
     "text": "La soluzione all'enigma finale è:",
-    "gate": "flag",
-    "sealed": true
+    "video": "video/enigma-6.enc",
+    "gate": "flag"
   }
 ]

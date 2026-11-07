@@ -26,8 +26,10 @@
  * the index can show them closed. A new flag riddle needs its MEDIA_KEY_<id> property, a new
  * version of the deployment and one more run of setupUnlocks() to add its row.
  *
- * Open assets (OPEN_ASSETS) are encrypted files that are not riddles, such as the image of a
- * hidden page: getAssetKey hands their key to any logged-in player, with no time or flag gate.
+ * Open assets (OPEN_ASSETS) are encrypted files that are not riddles, such as the image or the
+ * video of a hidden page: getAssetKey hands their key to any logged-in player. An asset with
+ * afterFlag stays closed ({ ok, locked: true }) until that riddle's box is ticked in Unlocks, so
+ * it opens together with the riddle; without afterFlag there is no time or flag gate.
  * They have their own allow-list, apart from the riddle gates: getPuzzleKey never returns their key.
  * Every key handed out is logged in the Visits sheet, one row per player and asset, so the
  * organizer sees who reached the hidden page, when first and how often.
@@ -61,13 +63,16 @@ var TIMED_PUZZLES = {
 var FLAG_PUZZLES = {
   p3: { keyProperty: 'MEDIA_KEY_p3' },
   p4: { keyProperty: 'MEDIA_KEY_p4' },
-  p5: { keyProperty: 'MEDIA_KEY_p5' }
+  p5: { keyProperty: 'MEDIA_KEY_p5' },
+  p6: { keyProperty: 'MEDIA_KEY_p6' }
 };
 var UNLOCKS_SHEET = 'Unlocks';
 
 // Encrypted files open to every logged-in player; the key is in Script Properties.
+// afterFlag: the asset stays closed until that flag riddle is ticked in Unlocks.
 var OPEN_ASSETS = {
-  tavola: { keyProperty: 'MEDIA_KEY_tavola' }
+  tavola: { keyProperty: 'MEDIA_KEY_tavola' },
+  arancione: { keyProperty: 'MEDIA_KEY_arancione', afterFlag: 'p6' }
 };
 var UNLOCKS_HEADERS = ['puzzleId', 'unlocked'];
 
@@ -236,13 +241,21 @@ function puzzleKeyResponse(puzzleId, now, readProperty, readFlags) {
   return { ok: true, locked: false, key: String(key).trim() };
 }
 
-/** Returns the media key of an open asset to any logged-in player, and logs the visit. */
+/**
+ * Returns the media key of an open asset to any logged-in player, and logs the visit; an asset
+ * whose riddle is still closed answers locked (not logged: nobody has seen it).
+ */
 function getAssetKey(req) {
   var user = authenticate(req);
   var assetId = typeof req.assetId === 'string' ? req.assetId.trim() : '';
-  var response = assetKeyResponse(assetId, function (name) {
-    return PropertiesService.getScriptProperties().getProperty(name);
-  });
+  var response = assetKeyResponse(
+    assetId,
+    function (name) {
+      return PropertiesService.getScriptProperties().getProperty(name);
+    },
+    readUnlockFlags
+  );
+  if (response.locked) return response;
   // Logged before the key leaves: whoever sees the asset is in the sheet.
   recordVisit(user.username, assetId);
   return response;
@@ -267,12 +280,17 @@ function recordVisit(username, assetId) {
   });
 }
 
-/** Pure core of getAssetKey: the property reader is injected for tests. */
-function assetKeyResponse(assetId, readProperty) {
+/** Pure core of getAssetKey: property reader and flag reader are injected for tests. */
+function assetKeyResponse(assetId, readProperty, readFlags) {
   if (!PUZZLE_ID_PATTERN.test(assetId) || !Object.prototype.hasOwnProperty.call(OPEN_ASSETS, assetId)) {
     throw new UserError('Contenuto non valido.');
   }
-  var key = readProperty(OPEN_ASSETS[assetId].keyProperty);
+  var asset = OPEN_ASSETS[assetId];
+  if (asset.afterFlag) {
+    var flags = readFlags ? readFlags() : {};
+    if (flags[asset.afterFlag] !== true) return { ok: true, locked: true };
+  }
+  var key = readProperty(asset.keyProperty);
   if (!key || !String(key).trim()) {
     throw new UserError('Il contenuto non è ancora pronto, riprova tra poco.', 'NOT_CONFIGURED');
   }
