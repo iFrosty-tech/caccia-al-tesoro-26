@@ -1,0 +1,657 @@
+/* The final-night crossword in the Sottosopra: a wall of dark glass panes. Behind some of them
+   hangs a bulb; when a word is complete its bulb comes on (any complete word, right or wrong).
+   Everything else is cold and still: the only warm things on screen are the lit panes.
+   On top of assets/hidden.css (tokens, background, .notice-lamp). app.js builds the grid and
+   sizes it through --cell / --gap on #grid; the geometry rules below keep it exact. Motion lives
+   in cruciverba-motion.css and animates only --lamp and opacity. */
+
+/* The lamp behind a pane: 0 cold glass, 1 lit, above 1 a short surge. Everything a lit cell
+   draws (fill, core, rim, glow, ink) is computed from it, so animating it is the switch-on. */
+@property --lamp {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+:root {
+  /* Mirrored from style.css. */
+  --type: "Special Elite", "Courier New", ui-monospace, monospace; /* typed accents only */
+  --neon-edge: #ff9488;
+  --neon-core: #ffe3dc;
+  --light-text: #ffd7a8; /* lamp-lit paper (14.9:1 on the void) */
+  --field-edge: #646c7e; /* 3.7:1 against the panel */
+  /* The board. */
+  --board-panel: rgba(12, 15, 26, 0.9);
+  --bar: #0b0e19; /* the panel, opaque: the grid scrolls under it */
+  --bar-h: 70px; /* two lines of clue (most clues on a phone), so the grid never jumps; also the frame's scroll-margin */
+  --void: rgba(3, 4, 9, 0.82);
+  --tile: #1c2233; /* cold glass; letters 12.8:1 */
+  --tile-edge: #5d6578; /* 3.5:1 against the void */
+  --tile-word: #3b1a24; /* the rift's light on the wall; letters 12.5:1 */
+  --tile-word-edge: #b5423f; /* 3.7:1 against the void */
+  --lit-rgb: var(--bulb-amber-rgb); /* one amber for every lamp: the light says nothing */
+  --lit-ink: #1d1405; /* 10.4:1 on the amber */
+}
+
+/* The page is a column, not the shared shell's centred notice. */
+body.cruciverba {
+  display: block;
+  place-items: normal;
+}
+
+/* Zero class weight, so .tool, .tool-text and .clue below set their own type and colour. */
+:where(.cruciverba) button {
+  font: inherit;
+  color: inherit;
+}
+
+.cruciverba :focus-visible {
+  outline: 2px solid var(--light);
+  outline-offset: 2px;
+}
+
+/* ---------- Masthead: the word in red neon on the horizon, one bulb hanging at its end ---------- */
+
+.masthead {
+  position: relative;
+  max-width: 96rem;
+  margin: 0 auto;
+  /* The same side margins as .board: the title starts on the panels' edge. */
+  padding: 24px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left));
+}
+
+/* The site's mark, hanging from the top edge of the screen (cord, socket, glass from hidden.css). */
+.masthead .notice-lamp {
+  left: auto;
+  right: max(22px, calc(env(safe-area-inset-right) + 6px));
+  margin-left: 0;
+}
+
+.masthead-title {
+  position: relative;
+  margin: 0 44px 0 0;
+  font-family: var(--display);
+  font-size: clamp(2.5rem, 12vw, 3.5rem);
+  font-weight: 900;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* The glow follows the tubes (a static drop-shadow of the stroke, as on the site's sign).
+   Motion hook: .masthead-neon warms up (opacity). */
+.masthead-neon {
+  display: inline-block;
+  color: rgba(var(--light-rgb), 0.1);
+  -webkit-text-stroke: 0.022em var(--neon-edge);
+  filter:
+    drop-shadow(0 0 1.5px rgba(var(--light-rgb), 0.95))
+    drop-shadow(0 0 7px rgba(var(--wake-rgb), 0.8))
+    drop-shadow(0 0 24px rgba(var(--wake-rgb), 0.45));
+}
+
+@supports not (-webkit-text-stroke: 1px black) {
+  .masthead-neon {
+    color: var(--neon-edge);
+  }
+}
+
+/* The horizon between the two worlds: a thin line of rift light the word stands on. */
+.masthead-title::after {
+  content: "";
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -12px;
+  right: -44px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.5) 12%, rgba(var(--light-rgb), 0.38) 58%, transparent);
+  box-shadow: 0 0 10px rgba(var(--light-rgb), 0.35);
+  pointer-events: none;
+}
+
+.tagline {
+  margin: 16px 0 0;
+  font-family: var(--type);
+  font-size: 1rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--light-text);
+  /* It sits on the bare sky: a dark halo keeps it readable when a strike lights the clouds. */
+  text-shadow: 0 0 4px rgba(6, 7, 13, 0.9), 0 0 12px rgba(6, 7, 13, 0.7);
+}
+
+/* ---------- Board ---------- */
+
+.board {
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: 0 max(12px, env(safe-area-inset-right)) calc(2rem + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* Dark glass panels, opaque enough to read on for an hour over the moving air (no blur: they
+   are large and sit over an animated canvas). */
+.play,
+.clues {
+  position: relative;
+  background: var(--board-panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 28px 60px -30px rgba(0, 0, 0, 0.95),
+    0 0 60px -34px rgba(var(--wake-rgb), 0.55);
+}
+
+/* clip, never hidden: the clue bar must stay sticky to the page. */
+.play {
+  min-width: 0;
+  overflow: clip;
+}
+
+/* The rift's hairline of light along the top edge, over the bar. */
+.play::before,
+.clues::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  z-index: 3;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--light-rgb), 0.7), transparent);
+  pointer-events: none;
+}
+
+/* The current clue, held at the top of the screen while the page scrolls. */
+.current-clue {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: var(--bar-h);
+  padding: 10px 14px;
+  background: var(--bar);
+  border-bottom: 1px solid rgba(var(--light-rgb), 0.3);
+  line-height: 1.45;
+  align-content: center; /* a one-line clue sits in the middle of the reserved height */
+}
+
+.current-ref {
+  margin-right: 0.55em;
+  font-family: var(--type);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  color: var(--light);
+}
+
+.current-ref:empty {
+  display: none;
+}
+
+.current-text {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* The void behind the wall. Vines creep in from two corners on it, under the grid: they show
+   only through the holes between the panes. */
+.frame {
+  position: relative;
+  isolation: isolate;
+  margin: 10px;
+  background: var(--void);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(var(--light-rgb), 0.17);
+  -webkit-mask:
+    var(--tex-vines) top right / 168px 168px no-repeat,
+    var(--tex-vines-bl) bottom left / 124px 124px no-repeat;
+  mask:
+    var(--tex-vines) top right / 168px 168px no-repeat,
+    var(--tex-vines-bl) bottom left / 124px 124px no-repeat;
+  pointer-events: none;
+}
+
+/* The grid's own scroll container: app.js reads its padding and scrolls only it. */
+.viewport {
+  position: relative;
+  overflow: auto;
+  max-height: 70vh;
+  padding: 1rem;
+  border-radius: inherit;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
+  scroll-margin-top: var(--bar-h);
+  scrollbar-width: thin;
+  scrollbar-color: #3a4152 transparent;
+}
+
+.tools {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+/* Ghost controls; the destructive one is the quietest thing on the board. */
+.tool {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--field-edge);
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Pointer only: on a touch screen a hover fill sticks after the tap and looks pressed. */
+@media (hover: hover) {
+  .tool:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.tool-text {
+  margin-left: auto;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* ---------- Grid ---------- */
+
+.grid {
+  position: relative;
+  display: grid;
+  gap: var(--gap);
+  width: max-content;
+  margin: 0 auto;
+}
+
+/* A pane of cold glass with a top-lit rim. No shadow at all until it is lit. */
+.cell {
+  position: relative;
+  width: var(--cell);
+  height: var(--cell);
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-top-color: #737b8e;
+  border-radius: 3px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  .cell:not(.in-word):not(.is-lit):hover {
+    background-color: #232a3d;
+  }
+}
+
+/* The active word: the rift's light on the wall. */
+.cell.in-word {
+  background-color: var(--tile-word);
+  border-color: var(--tile-word-edge);
+}
+
+/* The active cell; also the keyboard focus indicator, since #keys is invisible. */
+.cell.is-active {
+  outline: 2px solid var(--light);
+  outline-offset: -2px;
+}
+
+/* Tabbed into the grid before any word is chosen: no active cell yet, so the frame shows
+   where the focus is. */
+.frame:has(.keys:focus-visible):not(:has(.cell.is-active)) {
+  outline: 2px solid var(--light);
+  outline-offset: 2px;
+}
+
+.cell .num {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: max(7px, calc(var(--cell) * 0.28));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.cell .letter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* Fraunces is wider than a condensed face: a touch smaller than the reference, and a touch
+     lower, so it clears the clue number and (when lit) the index. */
+  padding-top: calc(var(--cell) * 0.14);
+  font-family: var(--display);
+  font-weight: 800;
+  font-variation-settings: "SOFT" 100, "WONK" 0;
+  font-size: calc(var(--cell) * 0.6);
+  line-height: 1;
+}
+
+/* The index of a lit lamp; app.js writes it only once the cell is lit. */
+.cell .mark {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: max(7px, calc(var(--cell) * 0.3));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ---------- The lit pane, drawn only from --lamp ----------
+   A hot pale core, amber body, darker amber rim, a glow of about 0.6 cell on the neighbours
+   (lit panes sit above them). The ink turns dark once the amber outshines the glass. The first
+   colour declarations are the final state for browsers without color-mix(). */
+.cell.is-lit {
+  --lamp: 1;
+  /* 0 until the amber outshines the glass, 1 from there. The dark ink, the index and the room
+     made for it come with the light, never before it (a remembered pane waits at --lamp 0).
+     The children inherit it already computed from this cell's --lamp. */
+  --lit-ramp: clamp(0, (var(--lamp) - 0.4) * 5, 1);
+  --lit-fill: clamp(0, var(--lamp), 1);
+  /* Panes smaller than a phone's 27 px (desktop, zoomed out) need more room for two digits. */
+  --lit-tight: max(0px, 27px - var(--cell));
+  --mark-ink: color-mix(in srgb, var(--lit-ink) calc(var(--lit-ramp) * 100%), transparent);
+  z-index: 1;
+  background-color: rgb(var(--lit-rgb));
+  color: var(--lit-ink);
+  border-color: rgb(176, 106, 14);
+  background-color: color-mix(in srgb, rgb(var(--lit-rgb)) calc(clamp(0, var(--lamp), 1) * 100%), var(--tile));
+  color: color-mix(in srgb, var(--lit-ink) calc(var(--lit-ramp) * 100%), var(--text));
+  /* The rim warms from the glass's own edge: the pane never loses its outline. */
+  border-color: color-mix(in srgb, rgb(176, 106, 14) calc(clamp(0, var(--lamp), 1) * 100%), var(--tile-edge));
+  background-image: radial-gradient(
+    circle at 50% 46%,
+    rgba(255, 246, 222, calc(0.8 * var(--lamp))) 0,
+    rgba(255, 224, 150, calc(0.32 * var(--lamp))) 38%,
+    rgba(255, 224, 150, 0) 72%
+  );
+  box-shadow:
+    inset 0 0 calc(var(--cell) * 0.16) rgba(150, 82, 0, calc(0.45 * clamp(0, var(--lamp), 1))),
+    0 0 calc(var(--cell) * 0.6 * var(--lamp)) calc(var(--cell) * 0.04 * var(--lamp)) rgba(var(--lit-rgb), calc(0.5 * var(--lamp)));
+}
+
+/* The clue number goes from the glass's quiet grey to dark ink with the light. */
+.cell.is-lit .num {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  color: color-mix(in srgb, color-mix(in srgb, var(--lit-ink) 72%, transparent) calc(var(--lit-ramp) * 100%), var(--muted));
+}
+
+/* Room for the index in the bottom-right corner; on small panes the letter also steps down. */
+.cell.is-lit .letter {
+  padding-right: calc((var(--cell) * 0.22 + var(--lit-tight) * 0.25) * var(--lit-ramp));
+  font-size: calc(var(--cell) * 0.6 - var(--lit-tight) * 0.3 * var(--lit-ramp));
+}
+
+/* The index on a knock-out of the pane's own colour, so a wide letter never runs into it:
+   the number is what the player reads. Index and knock-out both wait for the light. */
+.cell.is-lit .mark {
+  right: 0;
+  padding: 0 1px;
+  border-top-left-radius: 2px;
+  background-color: rgb(var(--lit-rgb));
+  background-color: color-mix(in srgb, color-mix(in srgb, rgb(var(--lit-rgb)) calc(var(--lit-fill) * 100%), var(--tile)) calc(var(--lit-ramp) * 100%), transparent);
+  color: var(--mark-ink);
+}
+
+.cell.is-lit.is-active {
+  outline-color: var(--lit-ink);
+}
+
+/* Hidden input that receives typing, moved over the active cell by app.js (as the reference). */
+.keys {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cell);
+  height: var(--cell);
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  caret-color: transparent;
+  pointer-events: none;
+}
+
+/* ---------- Clues ---------- */
+
+.clues {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+  padding: 18px 12px 14px 8px;
+}
+
+.clue-group h2 {
+  margin: 0 0 0.6rem 0.5rem;
+  font-family: var(--display);
+  font-weight: 650;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  text-shadow: 0 0 24px rgba(var(--light-rgb), 0.28);
+}
+
+/* A short rift hairline under each heading. */
+.clue-group h2::after {
+  content: "";
+  display: block;
+  width: 2.75rem;
+  height: 1px;
+  margin-top: 6px;
+  background: linear-gradient(90deg, rgba(var(--light-rgb), 0.75), transparent);
+}
+
+.clue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* At least 44 px tall (one thumb, at night); number, text and length share one baseline. */
+.clue {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr auto;
+  align-items: baseline;
+  align-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.45rem 0.5rem 0.45rem 0.25rem;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0 6px 6px 0;
+  background: transparent;
+  text-align: left;
+  line-height: 1.45;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  .clue:hover {
+    background: rgba(var(--light-rgb), 0.06);
+  }
+}
+
+.cruciverba .clue:focus-visible {
+  outline-offset: -2px;
+}
+
+.clue-num {
+  font-family: var(--type);
+  font-size: 1rem;
+  text-align: right;
+  color: var(--light);
+}
+
+.clue-len {
+  font-family: var(--type);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.clue.is-active {
+  background: rgba(var(--light-rgb), 0.12);
+  border-left-color: var(--light);
+}
+
+/* Filled is not lit and not right: just quieter. */
+.clue.is-filled .clue-text,
+.clue.is-filled .clue-num {
+  color: var(--muted);
+}
+
+/* ---------- Wide screens: schema left, clue column right, each scrolling on its own ---------- */
+
+/* From here at most one clue in 69 wraps: a one-line bar. */
+@media (min-width: 640px) {
+  :root {
+    --bar-h: 52px;
+  }
+}
+
+/* Side by side with the tools in the bar, the clue has less room: where most clues wrap, keep
+   the two-line bar, so the grid never jumps when the clue changes. */
+@media (min-width: 960px) and (max-width: 1279px), (min-width: 1360px) and (max-width: 1499px) {
+  :root {
+    --bar-h: 70px;
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    /* The board's max width (96rem), plain px for upside.js: the vines stay in the margins. */
+    --column: 1536px;
+  }
+
+  .masthead {
+    padding-top: 22px;
+    padding-bottom: 14px;
+  }
+
+  .board {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    align-items: start;
+    gap: 1.5rem;
+  }
+
+  /* The tools join the clue bar's row, so the whole board, tools included, ends above the
+     fold: a laptop sees every control and, from about 860 px tall, every row at 20 px. */
+  .tools {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 3;
+    height: var(--bar-h);
+    align-items: center;
+    padding: 0 10px;
+  }
+
+  .current-clue {
+    padding-right: 16.75rem; /* the tools' width */
+  }
+
+  /* Still symmetric (app.js reads it); the bar's extra lines come out of the frame's height,
+     so the board always ends on the same line. */
+  .viewport {
+    padding: 0.5rem;
+    max-height: calc(100vh - 13rem - var(--bar-h) + 52px);
+  }
+
+  /* Ends on the board's line (the bar, the frame's margins and the panel's border on top of
+     the frame), so the clue app.js scrolls into this column is always on screen. */
+  .clues {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 13rem + 74px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #3a4152 transparent;
+  }
+}
+
+@media (min-width: 1360px) {
+  .board {
+    grid-template-columns: minmax(0, 1fr) 38rem;
+  }
+
+  .clues {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---------- Forced colours: plain system colours; a lit pane stays a lit pane ---------- */
+
+@media (forced-colors: active) {
+  .masthead-neon {
+    filter: none;
+    -webkit-text-stroke: 0;
+    color: CanvasText;
+  }
+
+  .masthead-title::after,
+  .frame::before {
+    display: none;
+  }
+
+  .cell.in-word {
+    border-color: Highlight;
+  }
+
+  .cell.is-active {
+    outline-color: Highlight;
+  }
+
+  .cell.is-lit {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: HighlightText;
+    box-shadow: none;
+  }
+
+  .cell.is-lit .num,
+  .cell.is-lit .mark {
+    color: HighlightText;
+  }
+
+  .cell.is-lit .mark {
+    background-color: Highlight;
+  }
+
+  .cell.is-lit.is-active {
+    outline: 2px solid HighlightText;
+    outline-offset: -4px;
+  }
+
+  .clue.is-active {
+    border-left-color: Highlight;
+  }
+}
