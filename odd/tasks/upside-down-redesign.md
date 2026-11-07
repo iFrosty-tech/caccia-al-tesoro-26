@@ -136,10 +136,12 @@ orchestrator commits them. Nobody touches files outside their row.
 
 ## Verification (every agent, on its own work)
 - `node --check` on every changed JS file.
-- Preview harness (stubs the backend, logs in a fake player "Undici", injects preview-only p6):
-  `cd <scratchpad>/harness && NODE_PATH=$(npm root -g) node shoot.mjs --out <dir> --final
-  [--states login,index,p1,...] [--widths 390,1280] [--reduced]` → PNGs + one JSON line per shot
-  with console errors, page errors and horizontal overflow. Look at the PNGs.
+- Preview harness (stubs the backend, logs in a fake player "Undici"); during this redesign it
+  lived in the session scratchpad and injected a preview-only p6. It is now in the repository:
+  `node tools/preview/shoot.mjs --out .preview/shots/<dir> [--states login,index,p1,...]
+  [--widths 390,1280] [--reduced]` → PNGs + one JSON line per shot with console errors, page
+  errors and horizontal overflow (p6 is now the real final riddle in `puzzles.json`).
+  Look at the PNGs. The team itself is now in `.claude/agents/` (see `odd/team-sottosopra.md`).
 - Zero console/page errors, zero horizontal overflow at 320/390/1280.
 - Themes p3/p4/p5 still look like their rooms; `periodica/` renders its notice.
 

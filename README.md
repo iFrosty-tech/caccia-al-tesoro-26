@@ -269,3 +269,37 @@ Dopo aver modificato `Code.gs`, per mantenere lo **stesso URL** usa **Esegui il 
 - Gli utenti registrati prima dell'introduzione delle password hanno la colonna `password` vuota e non possono usare **Accedi** finché l'amministratore non ne scrive una.
 - Quando scrivi a mano una password nel foglio, mettici davanti un apostrofo se sembra un numero o una data (es. `'007`), altrimenti Sheets la converte (`7`) e il login fallisce.
 - Per liberare uno username, l'amministratore cancella la riga corrispondente nel foglio **`Users`** (le risposte già date restano in `Answers` e verranno riassociate a chi si registra di nuovo con quel nome).
+
+## 7. Anteprima locale e team di agenti (Claude Code)
+
+### Anteprima locale
+
+Servono Node.js e, per gli screenshot, Playwright con Chromium (non fanno parte del sito):
+
+```sh
+npm install --no-save playwright
+npx playwright install chromium
+```
+
+- `node tools/preview/serve.mjs --demo` apre il sito su http://localhost:8081/ con un **backend finto**: qualunque username e password funzionano e niente arriva al foglio Google. Senza `--demo` (porta 8080) usa il backend vero.
+- `node tools/preview/shoot.mjs` fotografa tutte le schermate (login, indice, ogni enigma, le pagine nascoste `periodica/`, `arancione/` e `c/`) a 390 e 1280 px in `.preview/shots/` e segnala errori in console e scorrimenti orizzontali. Opzioni nell'intestazione del file.
+
+`.preview/` e `node_modules/` sono esclusi da git.
+
+### Team di agenti
+
+In [`.claude/agents/`](.claude/agents) c'è il team che ha disegnato il look "Sottosopra": Claude Code lo trova da solo in ogni sessione aperta in questa cartella (terminale, app desktop, web). Ruoli, file di ciascuno e regole sono in [`odd/team-sottosopra.md`](odd/team-sottosopra.md).
+
+| Agente | Si occupa di |
+|---|---|
+| `regia` | trasforma una richiesta in un brief (`odd/tasks/`) e assegna il lavoro |
+| `atmosfera` | sfondo animato: cielo in tempesta, fulmini, nebbia, rampicanti, cenere (`upside.js`, `shadows.js`) |
+| `identita` | icone, immagine di condivisione, manifest, aspetto delle pagine nascoste (`periodica/`, `arancione/`, `c/`) |
+| `varco` | il cristallo che carica i video (`crystal.js`) |
+| `componenti` | struttura e stile di tutte le schermate (`index.html`, `style.css`) |
+| `motion` | animazioni e lucine: muro dell'alfabeto, filo degli indizi, caricamenti (`lights.js`, `motion.css`) |
+| `critica` | revisione visiva, solo lettura |
+| `accessibilita` | accessibilità, prestazioni e regressioni, solo lettura |
+| `rifinitura` | applica le correzioni confermate dalle revisioni |
+
+Si usano chiedendolo a Claude, per esempio "usa l'agente motion per far lampeggiare il sigillo dell'enigma finale" (con `/agents` vedi l'elenco). Per un lavoro che tocca più aree, chiedi di lanciare il workflow **`team-sottosopra`** ([`.claude/workflows/team-sottosopra.js`](.claude/workflows/team-sottosopra.js)) con la richiesta: regia scrive il brief, gli specialisti lavorano in parallelo, due revisori controllano e rifinitura corregge. Nessun agente fa commit: alla fine rivedi le modifiche e le pubblichi tu (o la sessione che li ha lanciati).
