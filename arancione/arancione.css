@@ -1,0 +1,106 @@
+/* /arancione/: one video in the dark. The shell (tokens, storm, notice) is ../assets/hidden.css;
+   here the bulb over the notice burns orange, and the video gets a frame of the same glow. */
+
+:root {
+  --lamp-rgb: 255, 132, 28;
+  --ember-rgb: 255, 132, 28;
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+/* Natural size, scaled down (never up) to fit the screen with its aspect ratio kept. Framed like
+   a screen glowing in the dark: an orange hairline, the glow around it. */
+.film {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100svh - 32px);
+  border-radius: 6px;
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(var(--ember-rgb), 0.35),
+    0 0 0 5px rgba(6, 7, 13, 0.85),
+    0 0 0 6px rgba(var(--ash-rgb), 0.08),
+    0 0 52px -6px rgba(var(--ember-rgb), 0.4),
+    0 30px 70px -30px rgba(0, 0, 0, 0.95);
+  animation: surface 0.9s ease-out backwards;
+}
+
+.film:focus-visible {
+  outline: 2px solid rgb(var(--ember-rgb));
+  outline-offset: 4px;
+}
+
+/* The video comes on like a failing light warming up (opacity only, two soft dips, no strobe),
+   as the image of the other hidden page. */
+@keyframes surface {
+  0% {
+    opacity: 0;
+  }
+  16% {
+    opacity: 0.8;
+  }
+  28% {
+    opacity: 0.25;
+  }
+  46% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.6;
+  }
+}
+
+/* Download with a known size: the chase stops and the bulbs fill up from the left, one per
+   seventh of the file. */
+.notice-bar.is-filling > i::after {
+  animation: none;
+  transition:
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out);
+}
+
+.notice-bar.is-filling > i.is-lit::after {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: radial-gradient(circle at 50% 42%, #ffffff 0 12%, rgba(var(--bulb-rgb), 1) 52%, rgba(var(--bulb-rgb), 0.9));
+  box-shadow:
+    0 0 6px 1px rgba(var(--bulb-rgb), 0.95),
+    0 0 18px 5px rgba(var(--bulb-rgb), 0.42);
+}
+
+/* "12,3 di 45,6 MB": tabular figures, so the line does not jitter as it counts. */
+.notice-amount {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film {
+    animation: none;
+  }
+
+  .notice-bar.is-filling > i::after {
+    transition: none;
+  }
+
+  /* Unlit bulbs stay dim while filling (the reduced-motion rule in hidden.css lights them all). */
+  .notice-bar.is-filling > i:not(.is-lit)::after {
+    border-color: rgba(var(--bulb-rgb), 0.42);
+    background:
+      radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.28), transparent 34%),
+      radial-gradient(circle at 50% 65%, rgba(var(--bulb-rgb), 0.24), rgba(var(--bulb-rgb), 0.08));
+    box-shadow: none;
+  }
+}

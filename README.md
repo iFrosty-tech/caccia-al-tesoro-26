@@ -188,16 +188,40 @@ L'enigma 5 funziona come l'enigma 3 (sigillato finché non spunti la sua casella
 3. Nell'editor Apps Script esegui di nuovo **`setupUnlocks`**: aggiunge la riga `p5` con la casella **non spuntata** (le righe esistenti e le loro spunte restano come sono).
 4. Fai push di `video/enigma-5.enc` e di `puzzles.json`. Quando vuoi aprire l'enigma, spunta la casella `unlocked` della riga `p5` nel foglio **`Unlocks`**.
 
-### Enigma finale (annunciato, ancora sigillato)
+### Enigma finale e pagina nascosta `/arancione/` (due video a segnale)
 
-L'enigma finale (`p6`) è già nell'elenco ma **non è pubblicato**: in [`puzzles.json`](puzzles.json) ha `"gate": "flag"` e `"sealed": true`, e nessun video. Con `"sealed": true` il sito lo mostra chiuso a tutti ("ancora sigillato") senza chiedere nulla al backend, che non lo conosce ancora; la sua pagina mostra il sigillo e ogni mezzo minuto (o con **Controlla ora**) rilegge solo `puzzles.json`.
+Il finale ha due video, entrambi pubblicati **solo cifrati** e aperti dalla **stessa spunta**, quella della riga `p6` nel foglio **`Unlocks`**:
 
-Il giorno dell'uscita:
+- **Enigma finale** (`p6`): la sua pagina mostra solo il video della telefonata, `video/enigma-6.enc`, con il lettore normale (come l'enigma 5). In [`puzzles.json`](puzzles.json) ha `"video"` e `"gate": "flag"`.
+- **Pagina nascosta [`/arancione/`](arancione/index.html)**: mostra solo il video del QR, `arancione/arancione.enc`. Come `/periodica/` non è collegata da nessuna parte, chiede ai motori di ricerca di non indicizzarla (`noindex`) e si vede solo dopo l'accesso alla caccia. In più resta **sigillata finché non spunti `p6`** ("Ancora sigillato", con **Controlla di nuovo**): prima della spunta il backend non consegna la chiave e la pagina non scarica niente. In `Code.gs` è l'asset `arancione` di `OPEN_ASSETS`, con `afterFlag: 'p6'` (togli `afterFlag` se un giorno la vuoi aperta a tutti i giocatori loggati, senza spunta). Chi vede il video finisce nel foglio **`Visits`** (`assetId` = `arancione`), come per la tavola.
 
-1. Cifra il video in `video/enigma-6.enc` e aggiungi la proprietà dello script `MEDIA_KEY_p6` (come per l'enigma 5).
-2. In `Code.gs` aggiungi `p6: { keyProperty: 'MEDIA_KEY_p6' }` a `FLAG_PUZZLES`, ripubblica come **nuova versione dello stesso deployment** e riesegui **`setupUnlocks`**: aggiunge la riga `p6` con la casella **non spuntata**.
-3. In `puzzles.json` togli `"sealed": true` e aggiungi `"video": "video/enigma-6.enc"` (più `theme` o `videoType` se servono), poi fai push. Chi è sulla pagina dell'enigma la vede ricaricarsi da sola: da qui l'enigma è sigillato dal foglio, come gli altri.
-4. Quando vuoi aprirlo, spunta la casella `unlocked` della riga `p6` nel foglio **`Unlocks`**.
+I due video usano **chiavi diverse**: con la chiave dell'enigma finale non si apre il video di `/arancione/`, quindi per vederlo bisogna proprio arrivare alla pagina.
+
+Per pubblicarli (gli originali restano **fuori** dal repository):
+
+1. Dalla cartella del repository cifra i due video. Ogni comando stampa una chiave diversa: annotale entrambe.
+
+   ```sh
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/finale-1-telefonata-web.mp4" video/enigma-6.enc
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/finale-2-qr.mp4" arancione/arancione.enc
+   ```
+
+   Ogni file cifrato deve restare sotto i **100 MB** (limite di GitHub); se è più grande, ricomprimi prima il video (per esempio `ffmpeg -i in.mp4 -c:v libx264 -crf 26 -preset slow -c:a aac -b:a 128k -movflags +faststart out.mp4`).
+2. In Apps Script, **Impostazioni progetto → Proprietà script**: aggiungi `MEDIA_KEY_p6` con la prima chiave e `MEDIA_KEY_arancione` con la seconda.
+3. Copia il `Code.gs` aggiornato nell'editor (ha `p6` in `FLAG_PUZZLES` e `arancione` in `OPEN_ASSETS`) e ripubblica come **nuova versione dello stesso deployment** (sezione 5).
+4. Nell'editor esegui di nuovo **`setupUnlocks`**: aggiunge la riga `p6` con la casella **non spuntata**.
+5. Solo adesso fai push di `video/enigma-6.enc` e `arancione/arancione.enc` e pubblica il sito. L'ordine conta: `puzzles.json` pubblica già l'enigma finale con il suo video, e con il backend vecchio (che non conosce `p6`) i giocatori lo vedrebbero aperto ma con un errore.
+6. Quando vuoi aprire il finale, spunta la casella `unlocked` della riga `p6` nel foglio **`Unlocks`**: si aprono insieme l'enigma finale e `/arancione/`.
+
+Gli indirizzi sono `…/caccia-al-tesoro-26/arancione` e `…/caccia-al-tesoro-26/c` (GitHub Pages aggiunge da solo la `/` finale).
+
+Per annunciare un enigma a segnale prima di avere il suo video, mettigli `"sealed": true` in `puzzles.json` (senza `video`): il sito lo mostra chiuso a tutti senza chiedere nulla al backend, e la sua pagina ogni mezzo minuto rilegge solo `puzzles.json`. Quando lo pubblichi togli `"sealed": true`, aggiungi `"video"` e segui i passi sopra; chi è sulla pagina dell'enigma la vede ricaricarsi da sola.
+
+### Pagina riservata `/c/` (in preparazione)
+
+La pagina [`c/`](c/index.html) esiste già, così l'indirizzo funziona, ma per ora mostra solo "Ancora sigillato" e un link alla caccia: non chiede niente al backend e non contiene nulla da scoprire. Anche lei non è collegata da nessuna parte ed è `noindex`. Il cruciverba arriverà qui.
+
+Le pagine `/arancione/` e `/c/` condividono lo stile di base in [`assets/hidden.css`](assets/hidden.css) (lo sfondo del Sottosopra e il pannello con la lampadina), così nessuna delle due rimanda all'altra nel proprio codice.
 
 ### Pagina nascosta `/periodica/` (immagine cifrata)
 
@@ -232,7 +256,7 @@ Per sostituire l'immagine (o cambiare chiave):
 
 Apri il Google Sheet, foglio **`Answers`**: una riga per giocatore ed enigma (`username`, `puzzleId`, `answer`, `updatedAt`). Ogni modifica aggiorna la stessa riga.
 
-Chi ha visto la pagina nascosta `/periodica/` è nel foglio **`Visits`** (vedi sopra).
+Chi ha visto le pagine nascoste `/periodica/` e `/arancione/` è nel foglio **`Visits`** (vedi sopra).
 
 ## 5. Aggiornare il codice Apps Script
 
