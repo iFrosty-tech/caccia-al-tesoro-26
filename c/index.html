@@ -8,7 +8,7 @@
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#06070d">
   <meta name="color-scheme" content="dark">
-  <title>Caccia al Tesoro</title>
+  <title>Cruciverba</title>
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="../assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
@@ -17,19 +17,58 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,72,400..900,0..100,0..1;1,72,400..600,100,1&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&display=swap">
   <link rel="stylesheet" href="../assets/hidden.css?v=20261107">
+  <link rel="stylesheet" href="cruciverba.css?v=20261107b">
+  <link rel="stylesheet" href="cruciverba-motion.css?v=20261107b">
 </head>
-<body>
-  <!-- Hidden page, reserved: its content is not published yet. Never linked from the site. -->
+<body class="cruciverba">
+  <!-- Hidden page: reached only by its QR code, never linked from the site. -->
   <canvas id="sea" class="sea" aria-hidden="true"></canvas>
   <div class="ambience" aria-hidden="true"></div>
 
-  <main class="notice">
+  <header class="masthead">
+    <!-- Decorative: the site's one bulb, hanging from the top of the screen. -->
     <span class="notice-lamp" aria-hidden="true"></span>
-    <h1 class="notice-title">Ancora sigillato</h1>
-    <p class="notice-text">Questa pagina si apre più avanti nella caccia.</p>
-    <a class="notice-action" href="../">Torna alla caccia</a>
+    <h1 class="masthead-title"><span class="masthead-neon">Cruciverba</span></h1>
+    <p class="tagline">Sesta notte. L'ultima.</p>
+  </header>
+
+  <main class="board">
+    <section class="play" aria-label="Schema">
+      <div class="current-clue" aria-live="polite">
+        <span class="current-ref" id="current-ref"></span>
+        <span class="current-text" id="current-text">Tocca una casella per iniziare.</span>
+      </div>
+      <!-- The void behind the wall of panes: vines grow on it, under the grid. -->
+      <div class="frame">
+        <div class="viewport" id="viewport">
+          <div class="grid" id="grid">
+            <input id="keys" class="keys" type="text" inputmode="text" autocomplete="off"
+                   autocorrect="off" autocapitalize="characters" spellcheck="false"
+                   enterkeyhint="next" aria-label="Scrivi una lettera">
+          </div>
+        </div>
+      </div>
+      <div class="tools">
+        <button type="button" class="tool" id="zoom-out" aria-label="Riduci lo schema">&minus;</button>
+        <button type="button" class="tool" id="zoom-in" aria-label="Ingrandisci lo schema">+</button>
+        <button type="button" class="tool tool-text" id="clear">Cancella tutto</button>
+      </div>
+    </section>
+
+    <section class="clues" aria-label="Definizioni">
+      <div class="clue-group">
+        <h2>Orizzontali</h2>
+        <ol class="clue-list" id="clues-across"></ol>
+      </div>
+      <div class="clue-group">
+        <h2>Verticali</h2>
+        <ol class="clue-list" id="clues-down"></ol>
+      </div>
+    </section>
   </main>
 
+  <script src="puzzle.js?v=20261107"></script>
+  <script src="app.js?v=20261107"></script>
   <script src="../upside.js?v=20261106"></script>
 </body>
 </html>

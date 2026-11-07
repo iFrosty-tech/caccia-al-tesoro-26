@@ -60,6 +60,6 @@ the builders, independently; `rifinitura` runs last.
   Each shot prints JSON: `consoleErrors` and `pageErrors` empty,
   `overflowPx` 0. Open the PNGs with the Read tool and look at them; iterate until they are right.
 - The rooms p3 (green), p4 (tarot), p5 (ombre) still read as themselves; the hidden pages
-  `periodica/`, `arancione/` and `c/` render their notices.
+  `periodica/` and `arancione/` render their notices, and `c/` renders the crossword.
 - To click through by hand: `node tools/preview/serve.mjs --demo` (fake backend, any password).
 - Playwright with Chromium is needed (`tools/preview/playwright.mjs` says how to install it).
