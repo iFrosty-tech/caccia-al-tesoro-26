@@ -2113,17 +2113,19 @@
     // `streamed`: the source is a MediaSource.
     function mountVideo(objectUrl, streamed) {
       // No "#t=" fragment on the blob URL: older iOS WebKit fails to resolve it and refuses the
-      // source. After the metadata, a seek to where the player left off (or a tiny one) paints
-      // that frame instead of a black box.
+      // source. No seek before the first play either: on iPhone a seek issued while the video
+      // still waits can stay pending for good, and Safari then reports its target as the current
+      // time, so the bar sat at 0:00 while the picture played and later seeks did nothing. The
+      // position the player left off at is restored once the picture moves.
       const player = renderVideoPlayer(objectUrl, title, Boolean(guard), streamed);
       const frame = player.querySelector(".video-frame");
       video = player.querySelector("video");
       if (guard) guard.attach(player, video);
       const resumeAt = rememberPosition(video, id);
-      video.addEventListener("loadedmetadata", () => {
-        if (!video.paused || video.currentTime !== 0) return;
+      video.addEventListener("playing", () => {
         const resume = resumeAt >= RESUME_MARGIN && resumeAt < video.duration - RESUME_MARGIN;
-        video.currentTime = resume ? resumeAt : 0.001;
+        // A seek of the player's own before the first play wins over the saved position.
+        if (resume && video.currentTime < RESUME_MARGIN) video.currentTime = resumeAt;
       }, { once: true });
       video.addEventListener("error", () => {
         // Ignore the error caused by leaving the page and dropping the source.

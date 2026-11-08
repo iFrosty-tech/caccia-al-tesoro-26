@@ -258,9 +258,9 @@
     film.addEventListener(
       "loadedmetadata",
       () => {
-        // No "#t=" fragment on the blob URL (older iOS WebKit refuses it): a tiny seek paints
-        // the first frame instead of a black box.
-        if (film.paused && film.currentTime === 0) film.currentTime = 0.001;
+        // No "#t=" fragment on the blob URL (older iOS WebKit refuses it), and no seek before the
+        // first play: on iPhone it can stay pending for good, and the timeline then sits at 0:00
+        // while the picture plays and ignores later seeks.
         reveal();
       },
       { once: true }
