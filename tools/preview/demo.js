@@ -43,8 +43,8 @@
           if (body.puzzleId === "p2") return json({ ok: true, locked: true, unlockAt: inTwoDays, serverNow: new Date().toISOString() });
           return json({ ok: true, locked: true });
         case "getAssetKey":
-          // /arancione/ stays sealed until the final riddle opens; /periodica/ gets no key here.
-          if (body.assetId === "arancione") return json({ ok: true, locked: true });
+          // /arancione/ and /reveal--trailer/ stay sealed; /periodica/ gets no key here.
+          if (body.assetId === "arancione" || body.assetId === "reveal-trailer") return json({ ok: true, locked: true });
           return json({ ok: false, error: "Anteprima locale: nessuna chiave.", code: "PREVIEW" });
         default:
           return json({ ok: false, error: "Azione non valida." });

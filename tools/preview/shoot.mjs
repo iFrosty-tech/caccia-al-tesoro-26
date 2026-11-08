@@ -9,7 +9,8 @@
 // States: login, login-typing, index, index-fresh, p1, p1-saving, p1-saved, p2 (counting down),
 //         p3, p4, p5, p6 (sealed: the stub keeps every flag riddle closed); hidden pages:
 //         periodica (logged in; the stub refuses its key, so it shows the error notice),
-//         periodica-out, arancione (logged in, sealed until p6 opens), arancione-out, c;
+//         periodica-out, arancione (logged in, sealed until p6 opens), arancione-out, c,
+//         reveal (logged in, sealed until everyone solves everything), reveal-out;
 //         all (default).
 // Prints one JSON line per shot: file, console errors, page errors, horizontal overflow (px).
 // Needs Playwright with Chromium (see playwright.mjs).
@@ -35,9 +36,9 @@ const WIDTHS = String(opt("widths", "390,1280")).split(",").map(Number);
 const REDUCED = !!opt("reduced", false);
 const WAIT = Number(opt("wait", 2600));
 const SCALE = Number(opt("scale", 1));
-const ALL = ["login", "login-typing", "index", "index-fresh", "p1", "p1-saving", "p1-saved", "p2", "p3", "p4", "p5", "p6", "periodica", "periodica-out", "arancione", "arancione-out", "c"];
+const ALL = ["login", "login-typing", "index", "index-fresh", "p1", "p1-saving", "p1-saved", "p2", "p3", "p4", "p5", "p6", "periodica", "periodica-out", "arancione", "arancione-out", "c", "reveal", "reveal-out"];
 // Hidden pages: the folder each state opens.
-const HIDDEN = { periodica: "periodica/", arancione: "arancione/", c: "c/" };
+const HIDDEN = { periodica: "periodica/", arancione: "arancione/", c: "c/", reveal: "reveal--trailer/" };
 let STATES = String(opt("states", "all"));
 STATES = STATES === "all" || STATES === "true" ? ALL : STATES.split(",");
 
@@ -93,8 +94,8 @@ async function stubBackend(page, { saveDelay = 1600 } = {}) {
         if (body.puzzleId === "p2") return reply({ ok: true, locked: true, unlockAt: inTwoDays, serverNow: new Date().toISOString() });
         return reply({ ok: true, locked: true });
       case "getAssetKey":
-        // /arancione/ stays sealed until the final riddle opens; /periodica/ gets no key here.
-        if (body.assetId === "arancione") return reply({ ok: true, locked: true });
+        // /arancione/ and /reveal--trailer/ stay sealed; /periodica/ gets no key here.
+        if (body.assetId === "arancione" || body.assetId === "reveal-trailer") return reply({ ok: true, locked: true });
         return reply({ ok: false, error: "Anteprima: nessuna chiave.", code: "PREVIEW" });
       default:
         return reply({ ok: false, error: "Azione non valida." });
