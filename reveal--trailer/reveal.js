@@ -1,5 +1,5 @@
 // Hidden page /reveal--trailer/: plays the encrypted reveal trailer to logged-in players only,
-// once every registered player has solved every riddle.
+// once that player has solved every riddle.
 //
 // The video ships only as reveal-trailer.enc (AES-GCM, see tools/encrypt-media.mjs). The key comes
 // from the backend action getAssetKey, which needs a valid session and answers "locked" until
@@ -233,7 +233,7 @@
   function showSealed() {
     showNotice({
       title: "Ancora sigillato",
-      text: "Si apre soltanto quando tutti avranno risolto tutti gli enigmi.",
+      text: "Si apre soltanto quando avrai risolto tutti gli enigmi.",
       retry: "Controlla di nuovo",
     });
   }
