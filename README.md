@@ -223,6 +223,28 @@ La pagina [`c/`](c/index.html) esiste già, così l'indirizzo funziona, ma per o
 
 Le pagine `/arancione/` e `/c/` condividono lo stile di base in [`assets/hidden.css`](assets/hidden.css) (lo sfondo del Sottosopra e il pannello con la lampadina), così nessuna delle due rimanda all'altra nel proprio codice.
 
+### Pagina nascosta `/reveal--trailer/` (si apre quando tutti hanno risolto tutto)
+
+La pagina [`reveal--trailer/`](reveal--trailer/index.html) mostra il trailer `reveal--trailer/reveal-trailer.enc`. Come `/arancione/` non è collegata da nessuna parte, è `noindex` e si vede solo dopo l'accesso. Resta **sigillata** ("Ancora sigillato", con **Controlla di nuovo**) finché **ogni giocatore registrato** nel foglio `Users` non ha dato la risposta giusta a **ogni enigma** elencato nella proprietà `SOLUTIONS`: il controllo lo fa il backend, che solo allora consegna la chiave. In `Code.gs` è l'asset `reveal-trailer` di `OPEN_ASSETS`, con `afterAllSolved: true`; chi vede il video finisce nel foglio **`Visits`**.
+
+Il confronto ignora maiuscole, accenti, punteggiatura e spazi in più (`"L'Àncora!"` vale come `"l ancora"`). Un account di prova che non ha risposto a tutto **blocca la pagina per sempre**: cancella la sua riga da `Users` (e da `Answers`).
+
+1. Cifra il video tenendo l'originale **fuori** dal repository e annota la chiave:
+
+   ```sh
+   node tools/encrypt-media.mjs "/percorso/fuori/dal/repo/reveal-trailer.mp4" reveal--trailer/reveal-trailer.enc
+   ```
+
+2. In Apps Script, **Proprietà script**: aggiungi `MEDIA_KEY_reveal_trailer` con la chiave e `SOLUTIONS` con le risposte giuste in JSON, una o più accettate per enigma:
+
+   ```json
+   {"p1": "il faro", "p2": ["ventitré", "23"], "p3": "...", "p4": "...", "p5": "...", "p6": "..."}
+   ```
+
+   Proprietà mancante o JSON non valido = pagina sigillata.
+3. Copia il `Code.gs` aggiornato nell'editor e ripubblica come **nuova versione dello stesso deployment** (sezione 5).
+4. Fai push di `reveal--trailer/`. L'indirizzo è `…/caccia-al-tesoro-26/reveal--trailer`.
+
 ### Pagina nascosta `/periodica/` (immagine cifrata)
 
 La pagina [`periodica/`](periodica/index.html) mostra un'immagine solo a chi ha fatto l'accesso al sito; non è collegata da nessuna parte e chiede ai motori di ricerca di non indicizzarla (`noindex`). Chi non ha una sessione vede un invito ad accedere dalla pagina principale.

@@ -29,7 +29,9 @@
  * Open assets (OPEN_ASSETS) are encrypted files that are not riddles, such as the image or the
  * video of a hidden page: getAssetKey hands their key to any logged-in player. An asset with
  * afterFlag stays closed ({ ok, locked: true }) until that riddle's box is ticked in Unlocks, so
- * it opens together with the riddle; without afterFlag there is no time or flag gate.
+ * it opens together with the riddle; without afterFlag there is no time or flag gate. An asset
+ * with afterAllSolved stays closed until every registered player has answered every riddle
+ * correctly, checked against the answers in the SOLUTIONS script property (never in the repo).
  * They have their own allow-list, apart from the riddle gates: getPuzzleKey never returns their key.
  * Every key handed out is logged in the Visits sheet, one row per player and asset, so the
  * organizer sees who reached the hidden page, when first and how often.
@@ -72,8 +74,14 @@ var UNLOCKS_SHEET = 'Unlocks';
 // afterFlag: the asset stays closed until that flag riddle is ticked in Unlocks.
 var OPEN_ASSETS = {
   tavola: { keyProperty: 'MEDIA_KEY_tavola' },
-  arancione: { keyProperty: 'MEDIA_KEY_arancione', afterFlag: 'p6' }
+  arancione: { keyProperty: 'MEDIA_KEY_arancione', afterFlag: 'p6' },
+  'reveal-trailer': { keyProperty: 'MEDIA_KEY_reveal_trailer', afterAllSolved: true }
 };
+
+// Script Property holding the correct answers as JSON, e.g. {"p1": "luna", "p2": ["mare", "il mare"]}.
+// Kept out of the public repo. An asset with afterAllSolved opens only when EVERY registered
+// player has a matching answer for EVERY riddle listed there; missing or invalid JSON keeps it closed.
+var SOLUTIONS_PROPERTY = 'SOLUTIONS';
 var UNLOCKS_HEADERS = ['puzzleId', 'unlocked'];
 
 /** Error whose message is safe to show to the player. */
@@ -248,13 +256,16 @@ function puzzleKeyResponse(puzzleId, now, readProperty, readFlags) {
 function getAssetKey(req) {
   var user = authenticate(req);
   var assetId = typeof req.assetId === 'string' ? req.assetId.trim() : '';
-  var response = assetKeyResponse(
-    assetId,
-    function (name) {
-      return PropertiesService.getScriptProperties().getProperty(name);
-    },
-    readUnlockFlags
-  );
+  var readProperty = function (name) {
+    return PropertiesService.getScriptProperties().getProperty(name);
+  };
+  var response = assetKeyResponse(assetId, readProperty, readUnlockFlags, function () {
+    return allPlayersSolved(
+      readRows(getSheet(USERS_SHEET, USERS_HEADERS)),
+      readRows(getSheet(ANSWERS_SHEET, ANSWERS_HEADERS)),
+      parseSolutions(readProperty(SOLUTIONS_PROPERTY))
+    );
+  });
   if (response.locked) return response;
   // Logged before the key leaves: whoever sees the asset is in the sheet.
   recordVisit(user.username, assetId);
@@ -280,8 +291,11 @@ function recordVisit(username, assetId) {
   });
 }
 
-/** Pure core of getAssetKey: property reader and flag reader are injected for tests. */
-function assetKeyResponse(assetId, readProperty, readFlags) {
+/**
+ * Pure core of getAssetKey: property reader, flag reader and the "everyone solved" check are
+ * injected for tests.
+ */
+function assetKeyResponse(assetId, readProperty, readFlags, readAllSolved) {
   if (!PUZZLE_ID_PATTERN.test(assetId) || !Object.prototype.hasOwnProperty.call(OPEN_ASSETS, assetId)) {
     throw new UserError('Contenuto non valido.');
   }
@@ -289,6 +303,9 @@ function assetKeyResponse(assetId, readProperty, readFlags) {
   if (asset.afterFlag) {
     var flags = readFlags ? readFlags() : {};
     if (flags[asset.afterFlag] !== true) return { ok: true, locked: true };
+  }
+  if (asset.afterAllSolved && !(readAllSolved && readAllSolved() === true)) {
+    return { ok: true, locked: true };
   }
   var key = readProperty(asset.keyProperty);
   if (!key || !String(key).trim()) {
@@ -323,6 +340,80 @@ function timedPuzzleState(puzzleId, now) {
   if (!Object.prototype.hasOwnProperty.call(TIMED_PUZZLES, puzzleId)) return null;
   var unlockAt = new Date(TIMED_PUZZLES[puzzleId].unlockAt);
   return { locked: now.getTime() < unlockAt.getTime(), unlockAt: unlockAt.toISOString() };
+}
+
+// ---------- Solutions ----------
+
+/**
+ * { puzzleId: [normalized accepted answers] } from the SOLUTIONS property, or null when it is
+ * missing, not valid JSON, empty, or has a riddle without any usable answer.
+ */
+function parseSolutions(raw) {
+  if (!raw || !String(raw).trim()) return null;
+  var data;
+  try {
+    data = JSON.parse(String(raw));
+  } catch (_) {
+    return null;
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  var ids = Object.keys(data);
+  if (!ids.length) return null;
+  var solutions = {};
+  for (var i = 0; i < ids.length; i++) {
+    var accepted = Array.isArray(data[ids[i]]) ? data[ids[i]] : [data[ids[i]]];
+    var normalized = accepted
+      .filter(function (value) {
+        return typeof value === 'string' || typeof value === 'number';
+      })
+      .map(normalizeAnswer)
+      .filter(function (value) {
+        return value !== '';
+      });
+    if (!normalized.length) return null;
+    solutions[ids[i]] = normalized;
+  }
+  return solutions;
+}
+
+/** Lowercase, no accents, punctuation as spaces, single spaces: "  L'Àncora! " -> "l ancora". */
+function normalizeAnswer(value) {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * True when there is at least one registered player and every one of them has, for every riddle
+ * in solutions, an answer matching one of the accepted ones. userRows are Users rows
+ * ([username, ...]), answerRows are Answers rows ([username, puzzleId, answer, ...]).
+ */
+function allPlayersSolved(userRows, answerRows, solutions) {
+  if (!solutions) return false;
+  var players = userRows
+    .map(function (row) {
+      return String(row[0]).trim().toLowerCase();
+    })
+    .filter(function (name) {
+      return name !== '';
+    });
+  if (!players.length) return false;
+  var answers = {};
+  answerRows.forEach(function (row) {
+    var name = String(row[0]).trim().toLowerCase();
+    if (!answers[name]) answers[name] = {};
+    answers[name][String(row[1])] = normalizeAnswer(row[2]);
+  });
+  var ids = Object.keys(solutions);
+  return players.every(function (name) {
+    var mine = answers[name] || {};
+    return ids.every(function (id) {
+      return Object.prototype.hasOwnProperty.call(mine, id) && solutions[id].indexOf(mine[id]) !== -1;
+    });
+  });
 }
 
 // ---------- Unlocks sheet ----------
