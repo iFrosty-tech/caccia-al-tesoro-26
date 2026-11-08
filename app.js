@@ -2241,6 +2241,12 @@
     return value == null ? "" : String(value).trim();
   }
 
+  // What lights a riddle on the index: its saved answer or, for the final riddle (whose page has
+  // no answer form), the final solution the server confirmed.
+  function collectedAnswer(puzzle) {
+    return String(puzzle.id) === FINAL_PUZZLE_ID ? savedAnswer(FINAL_ANSWER_ID) : savedAnswer(puzzle.id);
+  }
+
   function visuallyHidden(text) {
     const span = document.createElement("span");
     span.className = "visually-hidden";
@@ -2362,7 +2368,7 @@
       view.append(note);
     }
 
-    const solved = puzzles.filter((puzzle) => savedAnswer(puzzle.id) !== "").length;
+    const solved = puzzles.filter((puzzle) => collectedAnswer(puzzle) !== "").length;
     const progress = document.createElement("header");
     progress.className = "progress";
 
@@ -2382,7 +2388,7 @@
 
     // One bulb per riddle, in order on a wire: the collected ones lit, the one just collected
     // flickering on; on the first visit they power on with the tiles.
-    const collected = puzzles.map((puzzle) => savedAnswer(puzzle.id) !== "");
+    const collected = puzzles.map((puzzle) => collectedAnswer(puzzle) !== "");
     const freshIndex = puzzles.findIndex((puzzle) => String(puzzle.id) === game.freshId);
     let line = lights("string", puzzles.length, collected, { fresh: freshIndex, entrance: !game.rendered });
     if (!line) {
@@ -2525,7 +2531,7 @@
   // A riddle still waiting for its time gets a live countdown, registered in `clocks`; one
   // waiting for the organizer's signal stays sealed.
   function renderTile(puzzle, clocks) {
-    const answer = savedAnswer(puzzle.id);
+    const answer = collectedAnswer(puzzle);
     const sealed = !answer && isSealed(puzzle);
     const locked = sealed || (!answer && remainingMs(puzzle) > 0);
     const tile = document.createElement("a");
@@ -2625,7 +2631,7 @@
   }
 
   // Riddle page: title, optional subtitle, text, optional media and hint, then the answer
-  // form, pre-filled with the saved answer.
+  // form, pre-filled with the saved answer (none on the final riddle).
   function renderRiddle(puzzle) {
     const session = game.session;
     const loadId = game.loadId;
@@ -2787,7 +2793,8 @@
       );
     }
     if (hint) card.append(hint);
-    card.append(form);
+    // The final riddle has no answer form here: its solution goes in the final field on the index.
+    if (String(puzzle.id) !== FINAL_PUZZLE_ID) card.append(form);
     view.append(nav, card);
     els.puzzlesView.append(view);
     // A dedicated page shows its riddle at once; only the player's own light wakes up after.
