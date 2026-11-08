@@ -223,11 +223,13 @@ La pagina [`c/`](c/index.html) esiste già, così l'indirizzo funziona, ma per o
 
 Le pagine `/arancione/` e `/c/` condividono lo stile di base in [`assets/hidden.css`](assets/hidden.css) (lo sfondo del Sottosopra e il pannello con la lampadina), così nessuna delle due rimanda all'altra nel proprio codice.
 
-### Pagina nascosta `/reveal--trailer/` (si apre quando tutti hanno risolto tutto)
+### Pagina nascosta `/reveal--trailer/` (si apre a chi ha risolto tutto)
 
-La pagina [`reveal--trailer/`](reveal--trailer/index.html) mostra il trailer `reveal--trailer/reveal-trailer.enc`. Come `/arancione/` non è collegata da nessuna parte, è `noindex` e si vede solo dopo l'accesso. Resta **sigillata** ("Ancora sigillato", con **Controlla di nuovo**) finché **ogni giocatore registrato** nel foglio `Users` non ha dato la risposta giusta a **ogni enigma** elencato nella proprietà `SOLUTIONS`: il controllo lo fa il backend, che solo allora consegna la chiave. In `Code.gs` è l'asset `reveal-trailer` di `OPEN_ASSETS`, con `afterAllSolved: true`; chi vede il video finisce nel foglio **`Visits`**.
+La pagina [`reveal--trailer/`](reveal--trailer/index.html) mostra il trailer `reveal--trailer/reveal-trailer.enc`. Come `/arancione/` non è collegata da nessuna parte, è `noindex` e si vede solo dopo l'accesso. Resta **sigillata** ("Ancora sigillato", con **Controlla di nuovo**) finché **il giocatore che ha fatto l'accesso** non ha dato la risposta giusta a **ogni enigma** elencato nella proprietà `SOLUTIONS`: il controllo lo fa il backend, che solo allora gli consegna la chiave. Ogni giocatore la sblocca per sé, senza aspettare gli altri. In `Code.gs` è l'asset `reveal-trailer` di `OPEN_ASSETS`, con `afterAllSolved: true`; chi vede il video finisce nel foglio **`Visits`**.
 
-Il confronto ignora maiuscole, accenti, punteggiatura e spazi in più (`"L'Àncora!"` vale come `"l ancora"`). Un account di prova che non ha risposto a tutto **blocca la pagina per sempre**: cancella la sua riga da `Users` (e da `Answers`).
+Serve anche la **soluzione finale**: quando l'enigma `p6` è spuntato in `Unlocks`, la home mostra sotto le tessere il campo "Inserire qui la soluzione dell'enigma finale". Il backend (azione `checkFinalAnswer`) la confronta con la proprietà `FINAL_SOLUTION`; se è giusta la salva in `Answers` con `puzzleId` `final` e il sito porta il giocatore su `/reveal--trailer/`. Il trailer (`afterFinal: true`) si apre solo se **quel giocatore** ha la soluzione finale giusta **e** ha risolto tutti gli enigmi; altrimenti resta sigillato.
+
+Il confronto ignora maiuscole, accenti, punteggiatura e spazi in più (`"L'Àncora!"` vale come `"l ancora"`). Se un giocatore poi cambia una risposta e la sbaglia, la pagina torna sigillata per lui.
 
 1. Cifra il video tenendo l'originale **fuori** dal repository e annota la chiave:
 
@@ -242,6 +244,8 @@ Il confronto ignora maiuscole, accenti, punteggiatura e spazi in più (`"L'Ànco
    ```
 
    Proprietà mancante o JSON non valido = pagina sigillata.
+
+   Aggiungi anche `FINAL_SOLUTION` con la soluzione finale: testo semplice (`parola`) o JSON con più risposte accettate (`["parola", "la parola"]`). Senza, il campo in home risponde "La soluzione finale non è ancora pronta".
 3. Copia il `Code.gs` aggiornato nell'editor e ripubblica come **nuova versione dello stesso deployment** (sezione 5).
 4. Fai push di `reveal--trailer/`. L'indirizzo è `…/caccia-al-tesoro-26/reveal--trailer`.
 

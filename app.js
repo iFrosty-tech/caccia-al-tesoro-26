@@ -7,6 +7,10 @@
   const STORAGE_KEY = "caccia-al-tesoro-session";
   const KNOWN_KEY = "caccia-al-tesoro-known";
   const ANSWER_MAX = 500;
+  // The final solution field opens with this riddle; a correct answer leads to the trailer.
+  const FINAL_PUZZLE_ID = "p6";
+  const FINAL_ANSWER_ID = "final";
+  const REVEAL_TRAILER_URL = "reveal--trailer/";
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -2407,6 +2411,8 @@
     });
 
     view.append(progress, list);
+    const finalForm = renderFinalAnswer();
+    if (finalForm) view.append(finalForm);
     els.puzzlesView.append(view);
     startTileClocks(clocks);
 
@@ -2424,6 +2430,96 @@
     setPageTitle("Indizi");
     window.scrollTo(0, notice ? 0 : game.indexScroll);
     focusHeading(heading);
+  }
+
+  // The final solution: shown under the tiles only once the final riddle (p6) is open. The
+  // server checks it (the solution is never on the site) and a correct one leads to the trailer.
+  function renderFinalAnswer() {
+    const finalPuzzle = game.puzzles.find((puzzle) => String(puzzle.id) === FINAL_PUZZLE_ID);
+    if (!finalPuzzle || isSealed(finalPuzzle)) return null;
+    const session = game.session;
+    const loadId = game.loadId;
+
+    const form = document.createElement("form");
+    form.className = "answer-form final-answer";
+
+    const label = document.createElement("label");
+    label.className = "answer-label";
+    label.htmlFor = "answer-final";
+    label.textContent = "Inserire qui la soluzione dell'enigma finale";
+
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const input = document.createElement("input");
+    input.id = "answer-final";
+    input.type = "text";
+    input.maxLength = ANSWER_MAX;
+    input.autocomplete = "off";
+    input.placeholder = "La soluzione finale";
+    input.value = savedAnswer(FINAL_ANSWER_ID);
+
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.textContent = "Conferma";
+
+    const status = document.createElement("p");
+    status.className = "save-status";
+    status.setAttribute("role", "status");
+
+    input.addEventListener("input", () => {
+      if (button.disabled) return;
+      status.textContent = "";
+      status.className = "save-status";
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (button.disabled) return;
+      const submitted = input.value.trim();
+      if (!submitted) {
+        status.textContent = "Scrivi la soluzione prima di inviarla.";
+        status.className = "save-status error";
+        return;
+      }
+      button.disabled = true;
+      button.classList.add("is-pending");
+      status.className = "save-status is-pending";
+      status.replaceChildren(wakeLoader("Verifica…"));
+      try {
+        const reply = await api("checkFinalAnswer", {
+          username: session.username,
+          token: session.token,
+          answer: submitted,
+        });
+        if (loadId !== game.loadId) return;
+        if (!reply.correct) {
+          status.textContent = "Non è la soluzione giusta. Riprova.";
+          status.className = "save-status error";
+          return;
+        }
+        game.answers[FINAL_ANSWER_ID] = submitted;
+        status.replaceChildren(checkBadge(), "Esatto");
+        status.className = "save-status ok";
+        window.location.href = REVEAL_TRAILER_URL;
+      } catch (err) {
+        if (loadId !== game.loadId) return;
+        if (err instanceof ApiError && err.code === "AUTH") {
+          logout();
+          els.registerError.textContent = err.message;
+          return;
+        }
+        status.textContent = err.message;
+        status.className = "save-status error";
+      } finally {
+        button.disabled = false;
+        button.classList.remove("is-pending");
+      }
+    });
+
+    row.append(input, button);
+    form.append(label, row, status);
+    return form;
   }
 
   // A riddle still waiting for its time gets a live countdown, registered in `clocks`; one

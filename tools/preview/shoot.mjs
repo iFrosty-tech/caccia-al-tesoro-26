@@ -10,7 +10,7 @@
 //         p3, p4, p5, p6 (sealed: the stub keeps every flag riddle closed); hidden pages:
 //         periodica (logged in; the stub refuses its key, so it shows the error notice),
 //         periodica-out, arancione (logged in, sealed until p6 opens), arancione-out, c,
-//         reveal (logged in, sealed until everyone solves everything), reveal-out;
+//         reveal (logged in, sealed until the player solves every riddle), reveal-out;
 //         all (default).
 // Prints one JSON line per shot: file, console errors, page errors, horizontal overflow (px).
 // Needs Playwright with Chromium (see playwright.mjs).

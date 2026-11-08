@@ -14,7 +14,10 @@
  *   { action: "saveAnswer",   username, token, puzzleId, answer }
  *   { action: "getPuzzleKey", username, token, puzzleId }
  *   { action: "getAssetKey",  username, token, assetId }
+ *   { action: "checkFinalAnswer", username, token, answer }
  *
+ * The final solution (FINAL_SOLUTION script property) is typed on the index once p6 is open:
+ * checkFinalAnswer answers { ok, correct } and stores a correct answer under puzzleId "final".
  * Timed riddles (TIMED_PUZZLES) ship their media encrypted in the public repo. The AES key
  * lives only in Script Properties (Project Settings -> Script properties, e.g. MEDIA_KEY_p2):
  * getPuzzleKey hands it out only once this server's clock has passed unlockAt, and
@@ -30,7 +33,7 @@
  * video of a hidden page: getAssetKey hands their key to any logged-in player. An asset with
  * afterFlag stays closed ({ ok, locked: true }) until that riddle's box is ticked in Unlocks, so
  * it opens together with the riddle; without afterFlag there is no time or flag gate. An asset
- * with afterAllSolved stays closed until every registered player has answered every riddle
+ * with afterAllSolved stays closed until the logged-in player has answered every riddle
  * correctly, checked against the answers in the SOLUTIONS script property (never in the repo).
  * They have their own allow-list, apart from the riddle gates: getPuzzleKey never returns their key.
  * Every key handed out is logged in the Visits sheet, one row per player and asset, so the
@@ -75,12 +78,20 @@ var UNLOCKS_SHEET = 'Unlocks';
 var OPEN_ASSETS = {
   tavola: { keyProperty: 'MEDIA_KEY_tavola' },
   arancione: { keyProperty: 'MEDIA_KEY_arancione', afterFlag: 'p6' },
-  'reveal-trailer': { keyProperty: 'MEDIA_KEY_reveal_trailer', afterAllSolved: true }
+  'reveal-trailer': { keyProperty: 'MEDIA_KEY_reveal_trailer', afterAllSolved: true, afterFinal: true }
 };
 
+// Script Property holding the final solution typed on the index once p6 is open: a JSON string
+// or array of accepted answers (e.g. "parola" or ["parola", "la parola"]), or plain text. Kept out
+// of the public repo. A correct answer is stored in Answers under FINAL_ANSWER_ID; an asset with
+// afterFinal opens only for a player whose stored final answer still matches.
+var FINAL_SOLUTION_PROPERTY = 'FINAL_SOLUTION';
+var FINAL_ANSWER_ID = 'final';
+var FINAL_GATE_PUZZLE = 'p6';
+
 // Script Property holding the correct answers as JSON, e.g. {"p1": "luna", "p2": ["mare", "il mare"]}.
-// Kept out of the public repo. An asset with afterAllSolved opens only when EVERY registered
-// player has a matching answer for EVERY riddle listed there; missing or invalid JSON keeps it closed.
+// Kept out of the public repo. An asset with afterAllSolved opens only for a player whose answer
+// matches for EVERY riddle listed there; missing or invalid JSON keeps it closed.
 var SOLUTIONS_PROPERTY = 'SOLUTIONS';
 var UNLOCKS_HEADERS = ['puzzleId', 'unlocked'];
 
@@ -113,6 +124,9 @@ function doPost(e) {
         break;
       case 'getAssetKey':
         result = getAssetKey(req);
+        break;
+      case 'checkFinalAnswer':
+        result = checkFinalAnswer(req);
         break;
       default:
         throw new UserError('Azione non valida.');
@@ -189,29 +203,69 @@ function saveAnswer(req) {
   if (!PUZZLE_ID_PATTERN.test(puzzleId)) {
     throw new UserError('Enigma non valido.');
   }
+  // The final answer is written only by checkFinalAnswer, after it matched FINAL_SOLUTION.
+  if (puzzleId === FINAL_ANSWER_ID) {
+    throw new UserError('Enigma non valido.');
+  }
   var gate = puzzleGate(puzzleId, new Date(), readUnlockFlags);
   if (gate && gate.locked) {
     throw new UserError('Questo enigma non è ancora stato svelato.', 'LOCKED');
   }
+  var answer = readAnswer(req);
+  var now = upsertAnswer(user.username, puzzleId, answer);
+  return { ok: true, updatedAt: now.toISOString() };
+}
+
+/**
+ * Checks the final solution typed on the index, once p6 is open: { ok, correct }. A correct
+ * answer is stored under FINAL_ANSWER_ID, which the afterFinal gate of the trailer reads back.
+ */
+function checkFinalAnswer(req) {
+  var user = authenticate(req);
+  var flags = readUnlockFlags();
+  if (flags[FINAL_GATE_PUZZLE] !== true) {
+    throw new UserError("L'enigma finale non è ancora stato svelato.", 'LOCKED');
+  }
+  var answer = readAnswer(req);
+  if (!answer) {
+    throw new UserError('Scrivi la soluzione prima di inviarla.');
+  }
+  var accepted = parseAccepted(PropertiesService.getScriptProperties().getProperty(FINAL_SOLUTION_PROPERTY));
+  if (!accepted) {
+    throw new UserError('La soluzione finale non è ancora pronta, riprova tra poco.', 'NOT_CONFIGURED');
+  }
+  if (accepted.indexOf(normalizeAnswer(answer)) === -1) {
+    return { ok: true, correct: false };
+  }
+  upsertAnswer(user.username, FINAL_ANSWER_ID, answer);
+  return { ok: true, correct: true };
+}
+
+/** The trimmed answer of a request, refused when longer than ANSWER_MAX. */
+function readAnswer(req) {
   var answer = typeof req.answer === 'string' ? req.answer.trim() : '';
   if (answer.length > ANSWER_MAX) {
     throw new UserError('Risposta troppo lunga (max ' + ANSWER_MAX + ' caratteri).');
   }
+  return answer;
+}
 
+/** Writes the player's answer to a riddle in Answers, replacing an earlier one; returns the time. */
+function upsertAnswer(username, puzzleId, answer) {
   return withLock(function () {
     var sheet = getSheet(ANSWERS_SHEET, ANSWERS_HEADERS);
     var rows = readRows(sheet);
-    var key = user.username.toLowerCase();
+    var key = username.toLowerCase();
     var now = new Date();
     for (var i = 0; i < rows.length; i++) {
       if (rows[i][0].toLowerCase() === key && rows[i][1] === puzzleId) {
         // +2: one for the header row, one because sheet rows are 1-based.
         sheet.getRange(i + 2, 3, 1, 2).setValues([[safeCell(answer), now]]);
-        return { ok: true, updatedAt: now.toISOString() };
+        return now;
       }
     }
-    sheet.appendRow([safeCell(user.username), puzzleId, safeCell(answer), now]);
-    return { ok: true, updatedAt: now.toISOString() };
+    sheet.appendRow([safeCell(username), puzzleId, safeCell(answer), now]);
+    return now;
   });
 }
 
@@ -259,13 +313,25 @@ function getAssetKey(req) {
   var readProperty = function (name) {
     return PropertiesService.getScriptProperties().getProperty(name);
   };
-  var response = assetKeyResponse(assetId, readProperty, readUnlockFlags, function () {
-    return allPlayersSolved(
-      readRows(getSheet(USERS_SHEET, USERS_HEADERS)),
-      readRows(getSheet(ANSWERS_SHEET, ANSWERS_HEADERS)),
-      parseSolutions(readProperty(SOLUTIONS_PROPERTY))
-    );
-  });
+  var response = assetKeyResponse(
+    assetId,
+    readProperty,
+    readUnlockFlags,
+    function () {
+      return playerSolvedAll(
+        user.username,
+        readRows(getSheet(ANSWERS_SHEET, ANSWERS_HEADERS)),
+        parseSolutions(readProperty(SOLUTIONS_PROPERTY))
+      );
+    },
+    function () {
+      return playerSolvedFinal(
+        user.username,
+        readRows(getSheet(ANSWERS_SHEET, ANSWERS_HEADERS)),
+        parseAccepted(readProperty(FINAL_SOLUTION_PROPERTY))
+      );
+    }
+  );
   if (response.locked) return response;
   // Logged before the key leaves: whoever sees the asset is in the sheet.
   recordVisit(user.username, assetId);
@@ -292,10 +358,10 @@ function recordVisit(username, assetId) {
 }
 
 /**
- * Pure core of getAssetKey: property reader, flag reader and the "everyone solved" check are
+ * Pure core of getAssetKey: property reader, flag reader and the "player solved" checks are
  * injected for tests.
  */
-function assetKeyResponse(assetId, readProperty, readFlags, readAllSolved) {
+function assetKeyResponse(assetId, readProperty, readFlags, readAllSolved, readFinalSolved) {
   if (!PUZZLE_ID_PATTERN.test(assetId) || !Object.prototype.hasOwnProperty.call(OPEN_ASSETS, assetId)) {
     throw new UserError('Contenuto non valido.');
   }
@@ -303,6 +369,9 @@ function assetKeyResponse(assetId, readProperty, readFlags, readAllSolved) {
   if (asset.afterFlag) {
     var flags = readFlags ? readFlags() : {};
     if (flags[asset.afterFlag] !== true) return { ok: true, locked: true };
+  }
+  if (asset.afterFinal && !(readFinalSolved && readFinalSolved() === true)) {
+    return { ok: true, locked: true };
   }
   if (asset.afterAllSolved && !(readAllSolved && readAllSolved() === true)) {
     return { ok: true, locked: true };
@@ -376,6 +445,42 @@ function parseSolutions(raw) {
   return solutions;
 }
 
+/**
+ * Normalized accepted answers from a property holding a JSON string or array, or plain text;
+ * null when it is missing or has no usable answer.
+ */
+function parseAccepted(raw) {
+  if (raw === null || raw === undefined || !String(raw).trim()) return null;
+  var data;
+  try {
+    data = JSON.parse(String(raw));
+  } catch (_) {
+    data = String(raw);
+  }
+  var accepted = (Array.isArray(data) ? data : [data])
+    .filter(function (value) {
+      return typeof value === 'string' || typeof value === 'number';
+    })
+    .map(normalizeAnswer)
+    .filter(function (value) {
+      return value !== '';
+    });
+  return accepted.length ? accepted : null;
+}
+
+/** True when the player's stored final answer matches one of the accepted ones. */
+function playerSolvedFinal(username, answerRows, accepted) {
+  if (!accepted) return false;
+  var key = String(username).trim().toLowerCase();
+  return answerRows.some(function (row) {
+    return (
+      String(row[0]).trim().toLowerCase() === key &&
+      String(row[1]) === FINAL_ANSWER_ID &&
+      accepted.indexOf(normalizeAnswer(row[2])) !== -1
+    );
+  });
+}
+
 /** Lowercase, no accents, punctuation as spaces, single spaces: "  L'Àncora! " -> "l ancora". */
 function normalizeAnswer(value) {
   return String(value)
@@ -387,32 +492,19 @@ function normalizeAnswer(value) {
 }
 
 /**
- * True when there is at least one registered player and every one of them has, for every riddle
- * in solutions, an answer matching one of the accepted ones. userRows are Users rows
- * ([username, ...]), answerRows are Answers rows ([username, puzzleId, answer, ...]).
+ * True when the player has, for every riddle in solutions, an answer matching one of the accepted
+ * ones. answerRows are Answers rows ([username, puzzleId, answer, ...]).
  */
-function allPlayersSolved(userRows, answerRows, solutions) {
+function playerSolvedAll(username, answerRows, solutions) {
   if (!solutions) return false;
-  var players = userRows
-    .map(function (row) {
-      return String(row[0]).trim().toLowerCase();
-    })
-    .filter(function (name) {
-      return name !== '';
-    });
-  if (!players.length) return false;
-  var answers = {};
+  var key = String(username).trim().toLowerCase();
+  if (!key) return false;
+  var mine = {};
   answerRows.forEach(function (row) {
-    var name = String(row[0]).trim().toLowerCase();
-    if (!answers[name]) answers[name] = {};
-    answers[name][String(row[1])] = normalizeAnswer(row[2]);
+    if (String(row[0]).trim().toLowerCase() === key) mine[String(row[1])] = normalizeAnswer(row[2]);
   });
-  var ids = Object.keys(solutions);
-  return players.every(function (name) {
-    var mine = answers[name] || {};
-    return ids.every(function (id) {
-      return Object.prototype.hasOwnProperty.call(mine, id) && solutions[id].indexOf(mine[id]) !== -1;
-    });
+  return Object.keys(solutions).every(function (id) {
+    return Object.prototype.hasOwnProperty.call(mine, id) && solutions[id].indexOf(mine[id]) !== -1;
   });
 }
 

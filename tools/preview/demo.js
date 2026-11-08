@@ -14,6 +14,11 @@
   function store(all) {
     try { localStorage.setItem(ANSWERS_KEY, JSON.stringify(all)); } catch (_) {}
   }
+  // localStorage demo-open-p6 = "1" opens the final riddle, and with it the final solution field
+  // on the index (the demo accepts "demo").
+  function openP6() {
+    try { return localStorage.getItem("demo-open-p6") === "1"; } catch (_) { return false; }
+  }
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const json = (obj) => new Response(JSON.stringify(obj), { headers: { "Content-Type": "application/json" } });
 
@@ -30,13 +35,19 @@
           return json({ ok: true, username: body.username || "Undici", token: "demo" });
         case "getMyAnswers":
           await wait(500);
-          return json({ ok: true, username: body.username, answers: answers(), locked: ["p3", "p4", "p5", "p6"] });
+          return json({ ok: true, username: body.username, answers: answers(), locked: openP6() ? ["p3", "p4", "p5"] : ["p3", "p4", "p5", "p6"] });
         case "saveAnswer": {
           await wait(1300);
           const all = answers();
           all[body.puzzleId] = String(body.answer || "").trim();
           store(all);
           return json({ ok: true, updatedAt: new Date().toISOString() });
+        }
+        case "checkFinalAnswer": {
+          await wait(900);
+          const correct = String(body.answer || "").trim().toLowerCase() === "demo";
+          if (correct) { const all = answers(); all.final = String(body.answer).trim(); store(all); }
+          return json({ ok: true, correct: correct });
         }
         case "getPuzzleKey":
           await wait(400);
